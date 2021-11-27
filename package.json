@@ -1,0 +1,21 @@
+{
+  "name": "yiffbot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "date-fns": "^2.26.0",
+    "dotenv": "^10.0.0",
+    "grammy": "^1.4.2",
+    "node-schedule": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^16.11.10"
+  }
+}
