@@ -8,7 +8,7 @@ export const checkAdmin = (ctx: Context) => {
     return ctx.message.from.id === VenID;
 }
 
-export const ReportError = (ctx: Context, toVen: boolean) => {
+export const ReportError = (ctx: Context | any, toVen: boolean) => {
     if(toVen) bot.api.sendMessage(VenID, JSON.stringify(ctx));
     else ctx.reply(`An error occured.`);
 }
