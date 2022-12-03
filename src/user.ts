@@ -1,13 +1,63 @@
 import {Context} from "grammy";
-import {iUserTemp} from "./interface";
+import {iPicDB, iUserTemp} from "./interface";
 import fs from "fs";
 import path from "path";
 import https from "https";
 import {differenceInMinutes} from "date-fns";
+import { iUser } from "./interface";
 import s from "node-schedule";
 
 import {bot} from "./index";
 
+
+
+
+export const Users: User[] = [];
+export const PicDB: iPicDB[] = [];
+
+export class User
+{
+    public id: number;
+    public pics:{
+        pic: string;
+        message_id: number;
+        approved: boolean;
+    }[];
+    public public_: boolean;
+
+    constructor(id: number, pics: {pic: string, message_id: number; approved: boolean}[], public_: boolean) { 
+        this.id = id;
+        this.pics = pics;
+        this.public_ = public_;
+    }
+
+
+    /**
+     * Adds a picture to the user's list of approved pictures and saves the file to the pending folder. 
+     * CTX is the reply to the picture sent by the bot for approval.
+     */
+    private addApprovedPic(ctx: Context, user_id: number, file_name: string)
+    {
+        const orig_message = ctx.message?.reply_to_message;
+        //Check if message contains a picture
+        if(!orig_message?.photo)  return;
+        if(!orig_message.photo[0]) return;
+
+        const orig_photos = orig_message.photo;
+
+        const picture  = Users.find(item => item.id === user_id && item.pics.filter(pic => pic.pic === file_name));
+        if(!picture) throw new Error("User or pic not found in user list");
+
+        if(picture.pics[0].approved) throw new Error("Pic already approved");
+        picture.pics[0].approved = true;
+    }
+
+    private deletePic(message: Context)
+    {
+        
+    }
+
+}
 
 const temp_users:iUserTemp[] =
 [

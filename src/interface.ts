@@ -12,15 +12,33 @@ export interface media {
 
 
 //USERS
+// export interface iUser {
+//     user_id: number;
+//     public: boolean;
+//     pics: {
+//         pic: string;
+//         message_id: number;
+//         approved: boolean;
+//     }[];
+// }
 
 
 export interface iUser {
-    id: string;
-    pics: string[];
-    public: boolean;
-    approved_pics: string[];
-    submitted_pics: number;
-};
+    id: number;
+    pics:{
+        pic: string;
+        message_id: number;
+        approved: boolean;
+    }[];
+    public_: boolean;
+}
+
+
+export interface iPicDB {
+    pic: string;
+    path: string;
+}
+
 
 export interface iUserTemp {
     id: string;
