@@ -116,7 +116,7 @@ export const UserSendPics = async (ctx: Context) =>
     //Save the photo in the tmp_pics directory
     const photo = ctx.message.photo[ctx.message.photo.length - 1];
     let link = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${(await ctx.api.getFile(photo.file_id)).file_path}`;
-    const file = fs.createWriteStream(path.join(__dirname, "..", "tmp_pics", `${photo.file_id}.jpg`));
+    const file = fs.createWriteStream(path.join(__dirname, "..", "data", "tmp_pics", `${photo.file_id}.jpg`));
     if(link === undefined) throw "invalid file path"
     https.get(link, response => response.pipe(file));
     temp_users[index].pics!.push(ctx.message.photo[0].file_id);
@@ -148,7 +148,7 @@ const CleanPicsFromID = async (id: string) =>
     if(temp_users[index].pics?.length == 0) return;
 
     //Remove the pics from the tmp_pics directory
-    temp_users[index].pics!.forEach(pic => fs.unlinkSync(path.join(__dirname, "..", "tmp_pics", `${pic}.jpg`)));
+    temp_users[index].pics!.forEach(pic => fs.unlinkSync(path.join(__dirname, "..", "data", "tmp_pics", `${pic}.jpg`)));
 
     //Remove the id from the current_users array
     temp_users.splice(index, 1);
@@ -166,12 +166,12 @@ const CleanPicsFromID = async (id: string) =>
 
 s.scheduleJob("*/2 * * * *", CheckExpired);
 s.scheduleJob("*/2 * * * *", () => {
-    fs.writeFileSync(path.join(__dirname, "..", "tmp_users.json"), JSON.stringify(temp_users));
-    fs.writeFileSync(path.join(__dirname, "..", "allow_users.json"), JSON.stringify(allowUsers));
+    fs.writeFileSync(path.join(__dirname, "..", "data", "tmp_users.json"), JSON.stringify(temp_users));
+    fs.writeFileSync(path.join(__dirname, "..", "data", "allow_users.json"), JSON.stringify(allowUsers));
 });
 
 //Read the tmp_users.json file and parse it to the temp_users array
-if(fs.existsSync(path.join(__dirname, "..", "tmp_users.json"))) temp_users.push(...JSON.parse(fs.readFileSync(path.join(__dirname, "..", "tmp_users.json")).toString()));
+if(fs.existsSync(path.join(__dirname, "..", "data", "tmp_users.json"))) temp_users.push(...JSON.parse(fs.readFileSync(path.join(__dirname, "..", "data", "tmp_users.json")).toString()));
 
 //Read the allow_users.json file and parse it to the allowUsers array
-if(fs.existsSync(path.join(__dirname, "..", "allow_users.json"))) allowUsers.push(...JSON.parse(fs.readFileSync(path.join(__dirname, "..", "allow_users.json")).toString()));
+if(fs.existsSync(path.join(__dirname, "..", "data", "allow_users.json"))) allowUsers.push(...JSON.parse(fs.readFileSync(path.join(__dirname, "..", "data", "allow_users.json")).toString()));

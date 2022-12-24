@@ -1,0 +1,8 @@
+version: '3.9'
+
+services:
+  Bot:
+    image: dockerreg.server.de:443/yiffbot:latest
+    container_name: YiffBot
+    restart: always
+

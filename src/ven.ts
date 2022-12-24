@@ -8,7 +8,7 @@ export const settings = {
     amount: 10
 };
 
-fs.readFile(path.join(__dirname, "..", "venSettings.json"), "utf8", (err, data) => {
+fs.readFile(path.join(__dirname, "..", "data", "venSettings.json"), "utf8", (err, data) => {
     
 });
 
@@ -21,7 +21,7 @@ export const getPics = async (ctx: Context) =>
     {
         let pic = await getRandomMedia();
         let picmeta = await getPicMeta(pic);
-        if(picmeta == null) ctx.replyWithPhoto(new InputFile(path.join(__dirname, "..", "tmp_pics", pic)), {reply_markup: inlineKeyboard, caption: pic});
+        if(picmeta == null) ctx.replyWithPhoto(new InputFile(path.join(__dirname, "..", "data", "tmp_pics", pic)), {reply_markup: inlineKeyboard, caption: pic});
     }
 }
 
@@ -35,13 +35,13 @@ bot.callbackQuery("addpic", async (ctx: Context) =>
 
 const getRandomMedia = async () =>
 {
-    const pics = fs.readdirSync(path.join(__dirname, "..", "tmp_pics"));
+    const pics = fs.readdirSync(path.join(__dirname, "..", "data", "tmp_pics"));
     return pics[Math.floor(Math.random() * pics.length)];
 }
 
 const getPicMeta = async (pic: string) =>
 {
-    const picmeta = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "picmeta.json"), "utf8")) as Ipicmeta[];
+    const picmeta = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "data", "picmeta.json"), "utf8")) as Ipicmeta[];
     const result = picmeta.filter(p => p.pic == pic);
     if(result.length == 0) return null;
     return result[0];

@@ -9,6 +9,7 @@ bin/
 secrets.json
 userdata/
 data/
+docker-compose.yml
 
 ### Node ###
 # Logs
