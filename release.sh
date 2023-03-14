@@ -17,8 +17,8 @@ if [ "$CONFIRM" != "y" ]; then
     exit 1
 fi
 
-docker build -t dockerreg.$SERVER:443/yiffbot:latest .
-docker push dockerreg.$SERVER:443/yiffbot:latest
+sudo docker build -t dockerreg.$SERVER:443/yiffbot:latest .
+sudo docker push dockerreg.$SERVER:443/yiffbot:latest
 
 echo "Releasing to $SERVER"
 

@@ -1,4 +1,4 @@
-import {Context} from "grammy";
+import {Context, InlineKeyboard} from "grammy";
 import {iPicDB, iUserTemp} from "./interface";
 import fs from "fs";
 import path from "path";
@@ -17,6 +17,13 @@ export const PicDB: iPicDB[] = [];
 
 export class User
 {
+
+    public static load()
+    {
+        const users = fs.readdirSync(path.join(__dirname, "..", "data", "pics", "users.json"));
+    }
+
+    public cache: iPicDB[] = [];
     public id: number;
     public pics:{
         pic: string;
@@ -52,6 +59,12 @@ export class User
         picture.pics[0].approved = true;
     }
 
+    public static register = (ctx: Context) => {
+        const x = new InlineKeyboard()
+        .text("Register", "register").row()
+        .text("Cancel", "cancel").row();
+    }
+
     private deletePic(message: Context)
     {
         
@@ -59,23 +72,39 @@ export class User
 
 }
 
-const temp_users:iUserTemp[] =
-[
-
-];
-
+const temp_users:iUserTemp[] = [];
 const allowUsers:number[] = [];
 
 
+export const handleSubmit = (ctx: Context) => 
+{
+    if(ctx.from !== undefined) return;
+    if(ctx.message?.text?.endsWith("/submit")) return UserSend(ctx);
+    //Check if the user types "/submit confirm"
+    if(ctx.message?.text?.split(" ")[1] === "confirm") return UserSubmit(ctx);
+    else ctx.reply("Unknown parameter. Please use \"/submit\" to queue and \"/submit confirm\" to submit your work.");
+
+}
+
+/**
+ * @description Grants the user to send pics to the bot. Called after /submit
+ * @param ctx 
+ * @returns null
+ */
 export const UserSend = (ctx: Context) => 
 {
     if(ctx.from === undefined) return;
     allowUsers.push(ctx.from.id);
-    ctx.reply("You can now send pics to suggest to the bot! After you are done, you can submit your work with /submit or cancel your submission with /cancel"); 
+    ctx.reply("You can now send pics to suggest to the bot! After you are done, you can submit your work with /submit or cancel your submission with /cancel. All pics will be deleted after 1 hour of inactivity."); 
 }
 
 export const UserSubmit = (ctx: Context) =>
 {
+
+    //Check if the user types "/submit confirm"
+    if(ctx.message?.text?.endsWith("confirm") && ctx.from !== undefined) return;
+
+
     if(ctx.from === undefined) return;
     if(allowUsers.includes(ctx.from.id))
     {
@@ -87,8 +116,6 @@ export const UserSubmit = (ctx: Context) =>
 
         //Remove the id from the current_users array
         temp_users.splice(temp_users.findIndex(item => item.id === ctx.from?.id.toString()), 1);
-
-        
     }
 }
 
@@ -99,6 +126,7 @@ export const UserCancel = (ctx: Context) =>
     {
         CleanPicsFromID(ctx.from.id.toString());
         ctx.reply("Your submission has been cancelled!");
+
     }
     
 }

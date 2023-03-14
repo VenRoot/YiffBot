@@ -1,5 +1,5 @@
-import { PicDB, User, Users } from "./user";
-import { iPicDB, iUser } from "./interface";
+import { PicDB, User, Users } from "../user";
+import { iPicDB, iUser } from "../interface";
 import fs from "fs";
 import crypto from "crypto";
 

@@ -10,7 +10,7 @@ import { iModMed, media } from './interface';
 //@ts-ignore
 import { admins, groups } from "../data/secrets.json";
 import s from "node-schedule";
-import { SpecialTime, setMode, special } from './special';
+import { SpecialTime } from './special';
 
 const envStuff = [
     "BOT_TOKEN",
@@ -42,20 +42,21 @@ export const bot = new Bot(process.env.BOT_TOKEN);
 
 bot.command("caption", (ctx: Context) => AddModMed(ctx));
 bot.command("start", (ctx: Context) => ctx.reply('You have to suck @Ventox2 dick now :3'));
-bot.command('sendman', (ctx:Context) => {if(checkVen(ctx)) {SendMedia("normal")}});
-bot.command("sendmannewyear", (ctx: Context) => {if(checkVen(ctx)) {SendMedia("newyear")}});
+bot.command('sendman', (ctx:Context) => {if(checkVen(ctx)) SendMedia(SpecialTime.getMode().toLocaleLowerCase() as directories)});
 bot.command('ping', (e:Context) => e.reply("Pong"));
 bot.command('version', (e: Context) => e.reply(process.env.VERSION as string));
 
-bot.command("setchristmas", (e: Context) => { if(!checkVen(e)){return;} setMode("Christmas"); e.reply("Christmas mode enabled")});
-bot.command("setnewyear", (e: Context) => { if(!checkVen(e)){return;} setMode("NewYear"); e.reply("NewYear set")});
-bot.command("setnormal", (e: Context) => { if(!checkVen(e)) return; setMode("Normal"); e.reply("Back to normal")})
+bot.command("setchristmas", (e: Context) => { if(!checkVen(e)){return;} SpecialTime.setMode("Christmas"); e.reply("Christmas mode enabled")});
+bot.command("setnewyear", (e: Context) => { if(!checkVen(e)){return;} SpecialTime.setMode("NewYear"); e.reply("NewYear set")});
+bot.command("setnormal", (e: Context) => { if(!checkVen(e)) return; SpecialTime.setMode("Normal"); e.reply("Back to normal")})
 
 bot.command("whichtime", (e: Context) => e.reply(SpecialTime.getMode()));
 bot.command('test', (e: Context) => bot.api.sendMessage(groups[0].id, "Testing"));
 bot.command('status', (e: Context) => HowMuchMedia(e));
 
 bot.command("debugcheck", (ctx: Context) => debugCheck(ctx));
+bot.command("debug", (ctx: Context) => debug(ctx));
+bot.command("setDebug", (ctx: Context) => setDebug(ctx));
 
 bot.on(':photo', (e) =>  {if(!checkVen(e)){return;} UploadPic(e)});
 bot.on(':animation', (e) => {if(!checkVen(e)){return;} UploadGif(e)});
@@ -78,15 +79,26 @@ bot.catch(err => {
 });
 
 bot.api.setMyCommands([
-    {command: "caption", description: "Add a caption to a media"},
-    {command: "sendman", description: "Send a random media"},
     {command: "ping", description: "Ping the bot"},
     {command: "version", description: "Get the version of the bot"},
+    
+    {command: "---USER---", description: "Anything under this line is for users"},
+
+    {command: "register", description: "Register yourself for the bot"},
+    {command: "submit", description: "Allows you to send pics to your cache"},
+    {command: "submit confirm", description: "Submit your cached pics"},
+    {command: "submit cancel", description: "Cancels your submission"},
+    {command: "status", description: "Get the status of your media"},
+
+    {command: "---ADMIN---", description: "Anything under this line is for admins only"},
+    
+    {command: "caption", description: "Add a caption to a media"},
+    {command: "sendman", description: "Send a random media"},
     {command: "setchristmas", description: "Enable Christmas mode"},
     {command: "setnewyear", description: "Enable NewYear mode"},
     {command: "setnormal", description: "Disable Christmas/NewYear mode"},
-    {command: "status", description: "Get the status of the bot"},
     {command: "whichtime", description: "Get the current time mode"},
+    {command: "debug", description: "Set debug mode (only admins)"},
 ]);
 
 
@@ -95,12 +107,24 @@ bot.api.setMyCommands([
 s.scheduleJob("0 * * * *", () => {
     let timeout = 0;
     let date = new Date();
-    if(date.getMonth() === 11 && date.getDate() > 23 && date.getDate() < 27) timeout = 5000;
+    if(date.getMonth() === 11 && date.getDate() > 24 && date.getDate() < 27) timeout = 5000;
 
     setTimeout(() => {
         let mode = SpecialTime.getMode().toLocaleLowerCase() as directories;
         SendMedia(mode);
     }, timeout);
+});
+
+s.scheduleJob("30 * * * *", () => {
+    let timeout = 0;
+    let date = new Date();
+    if(date.getMonth() === 11 && date.getDate() > 24 && date.getDate() < 27)
+    {
+        setTimeout(() => {
+            let mode = SpecialTime.getMode().toLocaleLowerCase() as directories;
+            SendMedia(mode);
+        }, timeout);
+    }    
 });
 
 //Send a picture every hour
@@ -119,7 +143,7 @@ const SendMedia = async (directory: directories) => {
     console.log(modmed);
         switch (path.extname(Media)) {
             case ".jpg": await bot.api.sendPhoto(groups[0].id, new InputFile(path.join(__dirname, "..", "data", "pics", directory, Media)), { caption: modmed }); break;
-            case ".gif": await bot.api.sendAnimation(groups[0].id, new InputFile(path.join(__dirname, "..", "data", "pics", directory, Media)), { caption: modmed }); break;
+            case ".gif.mp4": await bot.api.sendAnimation(groups[0].id, new InputFile(path.join(__dirname, "..", "data", "pics", directory, Media)), { caption: modmed }); break;
             case ".mp4": await bot.api.sendVideo(groups[0].id, new InputFile(path.join(__dirname, "..", "data", "pics", directory, Media)), { caption: modmed }); break;
         }
 
@@ -161,7 +185,6 @@ const AddModMed = async (ctx: Context) => {
     if (ctx.message.text.split(" ").length < 2) return "no caption";
     if (ctx.message.reply_to_message === undefined) return "no reply_to_message";
     if (ctx.message.reply_to_message.document === undefined) return "not replying to document";
-    if (!checkVen(ctx)) return ctx.reply("You're not Ven!");
     let Media = ctx.message.reply_to_message.video?.file_id ?? ctx.message.reply_to_message.animation?.file_id ?? ctx.message.reply_to_message.photo?.[0]?.file_id;
     if (Media === undefined) throw "no media";
     let Caption = ctx.message.text.split(" ").slice(1).join(" ");
@@ -181,25 +204,14 @@ const DeleteMedia = (ctx: Context) => {
     //@ts-expect-error
     let Media = ctx.message?.reply_to_message[type][ctx.message.reply_to_message[type]?.length - 1]?.file_id as string;
 
-    let fileext: "jpg" | "mp4" | "gif" = type == "photo" ? "jpg" : type == "video" ? "mp4" : "gif";
-
     if(!Media) return ctx.reply("irgendwas ist schief gelaufen");
-    //Check if it's in the modmed.json
-    if (!fs.existsSync(path.join(__dirname, "..", "data", "modmed.json"))) fs.writeFileSync(path.join(__dirname, "..", "data", "modmed.json"), "[]");
-    let x = fs.readFileSync(path.join(__dirname, "..", "data", "modmed.json"));
-    let modmed = JSON.parse(x.toString()) as iModMed[];
-    if (modmed.filter(x => x.file == Media).length != 0) 
-    {
-        //Delete it
-        modmed = modmed.filter(x => x.file != Media);
-        fs.writeFileSync(path.join(__dirname, "..", "data", "modmed.json"), JSON.stringify(modmed));
-    }
-
+    
     // Try to find the file in the christmas, newyear or normal folder
     if(fs.existsSync(path.join(__dirname, "..", "data", "christmas", Media))) fs.unlinkSync(path.join(__dirname, "..", "data", "christmas", Media));
     else if(fs.existsSync(path.join(__dirname, "..", "data", "newyear", Media))) fs.unlinkSync(path.join(__dirname, "..", "data", "newyear", Media));
     else if(fs.existsSync(path.join(__dirname, "..", "data", "normal", Media))) fs.unlinkSync(path.join(__dirname, "..", "data", "normal", Media));
     else return ctx.reply("I couldn't find that file");
+    excludeFromModMed(Media);
     
 }
 
@@ -208,8 +220,8 @@ const UploadPic = async (ctx: Context) => {
     if (!checkVen(ctx)) return;
 
     let directory:directories = "normal";
-    if(special === "Christmas") directory = "christmas";
-    else if(special === "NewYear") directory = "newyear";
+    if(SpecialTime.getMode() === "Christmas") directory = "christmas";
+    else if(SpecialTime.getMode() === "NewYear") directory = "newyear";
 
     if (ctx.message?.photo === undefined) throw "no photo given";
     let PID = ctx.message.photo[ctx.message.photo.length - 1].file_id;
@@ -226,30 +238,40 @@ const UploadGif = async (ctx: Context) => {
     if (!checkVen(ctx)) return;
 
     let directory = "normal";
-    if(special === "Christmas") directory = "christmas";
-    else if(special === "NewYear") directory = "newyear";
+    if(SpecialTime.getMode() === "Christmas") directory = "christmas";
+    else if(SpecialTime.getMode() === "NewYear") directory = "newyear";
 
     if (ctx.message?.animation === undefined) throw "no gif given";
+    if(ctx.message.animation.file_size && ctx.message.animation.file_size > 20000000) return ctx.reply("GIF is too big");
     let PID = ctx.message.animation.file_id;
     let link = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${(await bot.api.getFile(PID)).file_path}`;
-    const file = fs.createWriteStream(path.join(__dirname, "..", "data", "pics", directory, `${PID}.gif`));
+    const file = fs.createWriteStream(path.join(__dirname, "..", "data", "pics", directory, `${PID}.gif.mp4`));
     if (link === undefined) throw "invalid file path"
     https.get(link, response => response.pipe(file));
+
+    if(debug(ctx)) ctx.reply(`Uploaded to ${directory}`);
 }
 
 const UploadVid = async (ctx: Context) => {
     if (!checkVen(ctx)) return;
 
+    
+
     let directory = "normal";
-    if(special === "Christmas") directory = "christmas";
-    else if(special === "NewYear") directory = "newyear";
+    if(SpecialTime.getMode() === "Christmas") directory = "christmas";
+    else if(SpecialTime.getMode() === "NewYear") directory = "newyear";
 
     if (ctx.message?.video === undefined) throw "no video given";
+    // If the video exceeds 20MB
+    if(ctx.message.video.file_size && ctx.message.video.file_size > 20000000) return ctx.reply("Video is too big"); 
     let PID = ctx.message.video.file_id;
     let link = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${(await bot.api.getFile(PID)).file_path}`;
     const file = fs.createWriteStream(path.join(__dirname, "..", "data", "pics", directory, `${PID}.mp4`));
     if (link === undefined) throw "invalid file path"
     https.get(link, response => response.pipe(file));
+
+    if(debug(ctx)) ctx.reply(`Uploaded to ${directory}`)
+
 }
 
 const checkVen = (e: Context) => admins.includes(e.chat?.id || -1);
@@ -272,7 +294,7 @@ const HowMuchMedia = async (ctx: Context) =>
 
         let med:media = {jpg: [], gif: [], mp4: []};
         
-        med.gif = Anzahl.filter(x => path.extname(x) == ".gif");
+        med.gif = Anzahl.filter(x => path.extname(x) == ".gif.mp4");
         med.jpg = Anzahl.filter(x => path.extname(x) == ".jpg");
         med.mp4 = Anzahl.filter(x => path.extname(x) == ".mp4");
 
@@ -302,4 +324,16 @@ declare global {
     }
 }
 
-const debugCheck = async (ctx: Context) =>  checkVen(ctx) ? ctx.reply("Du bist Admin") : ctx.reply("Du bist kein Admin");
+const debugCheck = (ctx: Context) =>  checkVen(ctx) ? ctx.reply("Du bist Admin") : ctx.reply("Du bist kein Admin");
+const debug = (ctx: Context) => {
+    if(!checkVen(ctx)) return;
+    return fs.readFileSync(path.join(__dirname, "..", "data", "debug")).toString() == "true";
+}
+const setDebug = (ctx: Context) => {
+    if(!checkVen(ctx)) return;
+    const msg = ctx.message?.text?.split(" ");
+    if(!msg) return ctx.reply("Fehler");
+    let debug = fs.readFileSync(path.join(__dirname, "..", "data", "debug")).toString() == "true";
+    fs.writeFileSync(path.join(__dirname, "..", "data", "debug"), debug ? "false" : "true");
+    return ctx.reply(`Debug-Modus ist nun ${debug ? "aus" : "an"}`);
+}
