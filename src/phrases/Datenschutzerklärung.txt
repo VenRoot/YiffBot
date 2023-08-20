@@ -1,0 +1,36 @@
+<b>Privacy Policy</b>
+
+This Privacy Policy describes how we collect, use, and disclose information that we obtain about users of our services. We take the protection of your personal data very seriously, and we want you to feel comfortable using our services. Therefore, we have implemented this Privacy Policy to inform you of our practices regarding the collection, use, and disclosure of your personal data.
+
+<b>Data Controller and Contact Information</b>
+The Data Controller for the processing of your personal data are the admins of the channel (Currently Ven and Nina). If you have any questions or concerns about this Privacy Policy or our data processing activities, please contact us at @Ventox2 or @NinaOverdone.
+
+<b>Data Collection and Processing</b>
+We collect personal data from you when you use our services. The personal data that we collect may include the following:
+* Your Telegram username and user ID
+* The media your shared with the bot
+* The chat history with this bot, if avaiable
+and other information that you provide to us.
+
+We use the personal data that we collect to provide our services to you, to communicate with you, to process your requests, and to improve our services. We may also use your personal data to comply with legal obligations, to protect our rights, and to protect the rights of others.
+
+<b>Data Sharing</b>
+We mainly collect data as feedback, to learn and improve the bot and code. We may also share your personal data with government authorities or other third parties when required by law or necessary to protect our rights or the rights of others.
+
+<b>Data Retention</b>
+We will retain your personal data for as long as necessary to provide our services to you. We may also retain your personal data for a longer period of time if required by law or if the police/public prosecutor's office requests us.
+
+<b>Data Security</b>
+We use industry-standard security measures to protect your personal data from unauthorized access, disclosure, alteration, or destruction. However, no data security measures can guarantee 100% security.
+Your data is stored on a server in Germany which complies to the data protection laws of Germany and the European Union.
+
+<b>Your Rights</b>
+You have the right to access, correct, and delete your personal data. You also have the right to object to or restrict the processing of your personal data. If you would like to exercise any of these rights, please contact us using the contact information provided above.
+
+<b>Changes to this Privacy Policy</b>
+We may update this Privacy Policy from time to time. If we make material changes to this Privacy Policy, we will notify you by sending a message prior to the effective date of the changes.
+
+<b>Data Protection Authority</b>
+If you are a resident of the European Union, you have the right to lodge a complaint with a supervisory authority if you believe that we have violated your rights under applicable data protection laws.
+
+By using our services, you consent to our collection, use, and disclosure of your personal data as described in this Privacy Policy.

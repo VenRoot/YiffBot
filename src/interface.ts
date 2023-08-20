@@ -9,17 +9,4 @@ export interface media {
     mp4: string[];
 }
 
-
-
-//USERS
-// export interface iUser {
-//     user_id: number;
-//     public: boolean;
-//     pics: {
-//         pic: string;
-//         message_id: number;
-//         approved: boolean;
-//     }[];
-// }
-
-
+export type directories = "christmas" | "newyear" | "normal";
