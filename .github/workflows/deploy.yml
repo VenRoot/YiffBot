@@ -1,0 +1,54 @@
+name: Build and Publish Docker Image
+
+on:
+  push:
+    branches:
+      - main # Oder deinen gewünschten Branch
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 'latest' # Oder deine gewünschte Version
+    
+    - name: Install Dependencies
+      run: npm install
+
+    - name: Run Tests
+      run: npm run test # Stelle sicher, dass dieses Script in deiner package.json definiert ist
+
+  build-and-publish:
+    needs: test # Abhängig vom 'test'-Job
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 'latest' # Oder deine gewünschte Version
+
+    - name: Install Dependencies
+      run: npm install
+
+    - name: Get Version
+      id: package-version
+      run: echo "::set-output name=version::$(node -p "require('./package.json').version")"
+
+    - name: Build Docker Image
+      run: docker build -t dockerreg.m-loeffler.de/yiffbot:${{ steps.package-version.outputs.version }} .
+
+    - name: Login to DockerHub
+      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login https://dockerreg.m-loeffler.de -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+
+    - name: Push Docker Image
+      run: docker push dockerreg.m-loeffler.de/yiffbot:${{ steps.package-version.outputs.version }}

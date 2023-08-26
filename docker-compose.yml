@@ -1,0 +1,50 @@
+version: '3.9'
+
+services:
+  Bot:
+    image: dockerreg.m-loeffler.de:443/yiffbot:latest
+    container_name: yiffbot
+    restart: always
+    volumes:
+      - yiffslutdata:/app/data
+    environment:
+      TZ: Europe/Berlin
+      DB_HOST: mariadb
+      DB_USER: yiffslut
+      DB_PASS: yiffslut
+      DB_NAME: yiffslut
+      DB_PORT: 3306
+
+  
+  # mongodb:
+  #   image: mongo:latest
+  #   container_name: YiffBotDB
+  #   restart: always
+  #   networks:
+  #     - internal
+  #   ports:
+  #     - '127.0.0.1:27018:27017'
+  #   volumes:
+  #     - mongodbdata:/data/db
+  #   environment:
+  #     TZ: Europe/Berlin
+  #     MONGO_INITDB_ROOT_USERNAME: yiffslut
+  #     MONGO_INITDB_ROOT_PASSWORD: yiffslut
+
+  mariadb:
+    image: mariadb:latest
+    restart: always
+    volumes:
+      - mariadbdata:/var/lib/mysql
+    environment:
+      TZ: Europe/Berlin
+      MYSQL_ROOT_PASSWORD: yiffslut
+      MYSQL_DATABASE: yiffslut
+      MYSQL_USER: yiffslut
+      MYSQL_PASSWORD: yiffslut
+    
+
+volumes:
+  yiffslutdata:
+  mongodbdata:
+  mariadbdata:
