@@ -142,7 +142,8 @@ export {
     storeData,
     getData,
     deleteData,
-    getAllData
+    getAllData,
+    User
 }
 
 
