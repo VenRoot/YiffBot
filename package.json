@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "tsc && node bin/index.js",
-    "dev": "nodemon src/index.ts"
+    "start": "tsc && node bin/index.js"
   },
   "keywords": [],
   "author": "",
@@ -15,8 +14,6 @@
     "date-fns": "^2.28.0",
     "dotenv": "^16.0.1",
     "grammy": "^1.9.0",
-    "mariadb": "^3.2.0",
-    "mongo": "^0.1.0",
     "node-schedule": "^2.1.0"
   },
   "devDependencies": {
