@@ -16,7 +16,8 @@ const pool = mariadb.createPool({
     password: process.env.DB_PASS,
     database: process.env.DB_NAME,
     port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 3306,
-    connectionLimit: 50
+    connectionLimit: 50,
+    bigIntAsNumber: true
 });
 
 export async function connect() {
@@ -126,6 +127,7 @@ async function getAllData()
         {
             results.push(user.userid);
         }
+        debugger;
         return results;
     }
     catch(err)

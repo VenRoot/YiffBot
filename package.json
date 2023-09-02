@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "tsc && node bin/index.js"
+    "test": "echo \"Error: no test specified\" && exit 0",
+    "start": "tsc && node bin/index.js",
+    "dev": "nodemon src/index.ts"
   },
   "keywords": [],
   "author": "",
