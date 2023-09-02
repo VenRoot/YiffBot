@@ -1,0 +1,21 @@
+version: '3.9'
+
+services:
+  mariadb:
+    image: mariadb:latest
+    container_name: yiffbotdbdev
+    ports:
+      - 3306:3306
+    restart: always
+    volumes:
+      - mariadbdata:/var/lib/mysql
+    environment:
+      TZ: Europe/Berlin
+      MYSQL_ROOT_PASSWORD: yiffslut
+      MYSQL_DATABASE: yiffslut
+      MYSQL_USER: yiffslut
+      MYSQL_PASSWORD: yiffslut
+    
+
+volumes:
+  mariadbdata:

@@ -159,16 +159,18 @@ const getRandomMedia = async (dir: directories) =>
     if(x.length < 10)
     {
         admins.forEach(async (admin) => {
-            await bot.api.sendMessage(admin, `Achtung! Nur noch ${x.length} Medien! Bitte nachfüllen`);
+            await bot.api.sendMessage(admin, `Achtung! Nur noch ${x.length} Medien! Bitte nachfüllen`).catch(async err => {
+                await bot.api.sendMessage(VenID, `Konnte Nachricht an Admin ${admin} nicht senden: RawError: ${JSON.stringify(err)}`);
+            })
         });
     }
 
-    // if(x.length < 10) bot.api.sendMessage(VenID, `Achtung! Nur noch ${x.length} Medien! Bitte nachfüllen`)
     if (x.length == 0)
     {
-    //   bot.api.sendMessage(VenID, `Ordner ist leer`);
       admins.forEach(async (admin) => {
-          await bot.api.sendMessage(admin, `Ordner ist leer`);
+          await bot.api.sendMessage(admin, `Ordner ist leer`).catch(async err => {
+            await bot.api.sendMessage(VenID, `Konnte Nachricht an Admin ${admin} nicht senden: RawError: ${JSON.stringify(err)}`);
+          });
       });
       return null;
     }
