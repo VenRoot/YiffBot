@@ -8,6 +8,8 @@ bin/
 secrets.json
 userdata/
 data/
+*.env
+.env*
 
 ### Node ###
 # Logs

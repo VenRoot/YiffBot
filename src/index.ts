@@ -5,7 +5,7 @@ import https from "https";
 dotenv.config();
 
 import { Bot, Context, InputFile } from "grammy";
-import { ReportError } from './core';
+import { ReportError, checkAdmin } from './core';
 import { iModMed, media } from './interface';
 //@ts-ignore
 import {VenID, groups} from "../secrets.json";
@@ -18,7 +18,7 @@ export const bot = new Bot(process.env.BOT_TOKEN);
 
 bot.command("caption", (ctx: Context) => AddModMed(ctx));
 bot.command("start", (ctx: Context) => ctx.reply('You have to suck @Ventox2 dick now :3'));
-bot.command('sendman', (ctx:Context) => {if(checkVen(ctx)) {SendMedia("normal")}});
+bot.command('sendman', async (ctx:Context) => {if(await checkAdmin(ctx)) {SendMedia("normal").then(() => ctx.reply("Media sent"))}});
 bot.command("sendmannewyear", (ctx: Context) => {if(checkVen(ctx)) {SendMedia("newyear")}});
 bot.command('ping', (e:Context) => e.reply("Pong"));
 bot.command('version', (e: Context) => e.reply(process.env.VERSION as string));
@@ -75,6 +75,35 @@ bot.command("adduser", (e: Context) => {
 
 
 
+bot.on(':photo', async (e) =>  {if(!await checkAdmin(e)){return e.reply("Permission denied");} UploadPic(e)});
+bot.on(':animation', async (e) => {if(!await checkAdmin(e)){return e.reply("Permission denied");} UploadGif(e)});
+bot.on(':video', async (e) => {if(!await checkAdmin(e)){return e.reply("Permission denied");} UploadVid(e)});
+
+
+bot.command("adduser", (e: Context) => {
+    try
+    {
+        if(!checkVen(e)) return e.reply("Permission denied");
+
+        if(e.message?.text === undefined) return e.reply("No message text");
+        if(e.message.text.split(" ").length < 2) return e.reply("No UserID");
+        let ID = e.message.text.split(" ")[1];
+        if(ID === undefined) return e.reply("No UserID");
+        if(isNaN(parseInt(ID))) return e.reply("Invalid UserID");
+    
+        storeData({userid: parseInt(ID)});
+    
+        e.reply(`Added UserID ${ID}`);
+    }
+    catch(err)
+    {
+        ReportError(err);
+    }
+});
+
+
+
+
 bot.start({drop_pending_updates: process.env.DROP_PENDING_UPDATES === "true", onStart: () => {
     console.log(VenID);
     bot.api.sendMessage(VenID, "Bot started");
@@ -85,7 +114,7 @@ type directories = "christmas" | "newyear" | "normal";
 
 
 bot.catch(err => {
-    ReportError(err, true);
+    ReportError(err);
     console.error(err);
     process.exit(1);
 });
@@ -100,6 +129,7 @@ bot.api.setMyCommands([
     {command: "unsetchristmas", description: "Disable Christmas mode"},
     {command: "unsetnewyear", description: "Disable NewYear mode"},
     {command: "status", description: "Get the status of the bot"},
+    {command: "adduser", description: "Add a user to the bot by their ID"},
 ]);
 
 //Start the bot
@@ -119,8 +149,8 @@ s.scheduleJob("0 * * * *", () => {
 //Send a picture every hour
 
 process.on('uncaughtException', (err: any) => {
-    console.log(err);
-    ReportError(err, true);
+    console.error(err);
+    ReportError(err);
     process.kill(process.pid, 'SIGINT');
 });
 
@@ -135,33 +165,52 @@ const SendMedia = async (directory: directories) => {
         {
             switch(path.extname(Media))
             {
-                case ".jpg": await bot.api.sendPhoto(groups[0].id, new InputFile(path.join(__dirname, "..", "pics", directory, Media)), {caption: modmed} ); break;
-                case ".gif": await bot.api.sendAnimation(groups[0].id, new InputFile(path.join(__dirname, "..", "pics", directory, Media)), {caption: modmed} ); break;
-                case ".mp4": await bot.api.sendVideo(groups[0].id, new InputFile(path.join(__dirname, "..", "pics", directory, Media)), {caption: modmed} ); break;
+                case ".jpg": await bot.api.sendPhoto(groups[0].id, new InputFile(path.join(__dirname, "..", "data", "pics", directory, Media)), {caption: modmed} ); break;
+                case ".gif": await bot.api.sendAnimation(groups[0].id, new InputFile(path.join(__dirname, "..", "data", "pics", directory, Media)), {caption: modmed} ); break;
+                case ".mp4": await bot.api.sendVideo(groups[0].id, new InputFile(path.join(__dirname, "..", "data", "pics", directory, Media)), {caption: modmed} ); break;
             }
         }
         else
         {
             switch(path.extname(Media))
             {
-                case ".jpg": await bot.api.sendPhoto(groups[0].id, new InputFile(path.join(__dirname, "..", "pics", directory, Media)) ); break;
-                case ".gif": await bot.api.sendAnimation(groups[0].id, new InputFile(path.join(__dirname, "..", "pics", directory, Media)) ); break;
-                case ".mp4": await bot.api.sendVideo(groups[0].id, new InputFile(path.join(__dirname, "..", "pics", directory, Media)) ); break;
+                case ".jpg": await bot.api.sendPhoto(groups[0].id, new InputFile(path.join(__dirname, "..", "data", "pics", directory, Media)) ); break;
+                case ".gif": await bot.api.sendAnimation(groups[0].id, new InputFile(path.join(__dirname, "..", "data", "pics", directory, Media)) ); break;
+                case ".mp4": await bot.api.sendVideo(groups[0].id, new InputFile(path.join(__dirname, "..", "data", "pics", directory, Media)) ); break;
             }
         }
     if(modmed != undefined) excludeFromModMed(Media);
-    fs.unlinkSync(path.join(__dirname, "..", "pics", directory, Media));
+    fs.unlinkSync(path.join(__dirname, "..", "data", "pics", directory, Media));
 };
 
 
 const getRandomMedia = async (dir: directories) =>
 {
 
-    let x = fs.readdirSync(path.join(__dirname, "..", "pics", dir));
-    if(x.length < 10) bot.api.sendMessage(VenID, `Achtung! Nur noch ${x.length} Medien! Bitte nachfüllen`)
+    let x = fs.readdirSync(path.join(__dirname, "..", "data", "pics", dir));
+
+    let admins = await getAllData();
+    if(admins === null)
+    {
+        admins = [VenID];
+    }
+
+    if(x.length < 10)
+    {
+        admins.forEach(async (admin) => {
+            await bot.api.sendMessage(admin, `Achtung! Nur noch ${x.length} Medien! Bitte nachfüllen`).catch(async err => {
+                await bot.api.sendMessage(VenID, `Konnte Nachricht an Admin ${admin} nicht senden: RawError: ${JSON.stringify(err)}`);
+            })
+        });
+    }
+
     if (x.length == 0)
     {
-      bot.api.sendMessage(VenID, `Ordner ist leer`);
+      admins.forEach(async (admin) => {
+          await bot.api.sendMessage(admin, `Ordner ist leer`).catch(async err => {
+            await bot.api.sendMessage(VenID, `Konnte Nachricht an Admin ${admin} nicht senden: RawError: ${JSON.stringify(err)}`);
+          });
+      });
       return null;
     }
     else return (x[Math.floor(Math.random() * x.length)]);
@@ -169,20 +218,20 @@ const getRandomMedia = async (dir: directories) =>
 
 const excludeFromModMed = async (Media: string) =>
 {
-    let x = fs.readFileSync(path.join(__dirname, "..", "modmed.json"));
+    let x = fs.readFileSync(path.join(__dirname, "..", "data", "modmed.json"));
     let modmed = JSON.parse(x.toString()) as iModMed[];
     //if the media is not in the modmed list, return
     if(!modmed.some(x => x.file === Media)) return;
     modmed = modmed.filter(x => x.file != Media);
-    fs.writeFileSync(path.join(__dirname, "..", "modmed.json"), JSON.stringify(modmed));
+    fs.writeFileSync(path.join(__dirname, "..", "data", "modmed.json"), JSON.stringify(modmed));
 }
 
 const saveModMed = async (Media: string, Caption: string) =>
 {
-    let x = fs.readFileSync(path.join(__dirname, "..", "modmed.json"));
+    let x = fs.readFileSync(path.join(__dirname, "..", "data", "modmed.json"));
     let modmed = JSON.parse(x.toString()) as iModMed[];
     modmed.push({file: Media, caption: Caption});
-    fs.writeFileSync(path.join(__dirname, "..", "modmed.json"), JSON.stringify(modmed));
+    fs.writeFileSync(path.join(__dirname, "..", "data", "modmed.json"), JSON.stringify(modmed));
 }
 
 const AddModMed = async (ctx: Context) =>
@@ -235,7 +284,8 @@ const UploadGif = async (ctx: Context) =>
     let fuse = false;
     if(special.Christmas) directory = "christmas";
     else if(special.NewYear) directory = "newyear";
-    if(!checkVen(ctx)) return;
+    // if(!checkVen(ctx)) return;
+    if(!await checkAdmin(ctx)) return ctx.reply("Permission denied");
 
     if(ctx.message?.animation === undefined) throw "no gif given";
     let PID = ctx.message.animation.file_id;
@@ -261,7 +311,8 @@ const UploadVid = async (ctx: Context) =>
     let fuse = false;
     if(special.Christmas) directory = "christmas";
     else if(special.NewYear) directory = "newyear";
-    if(!checkVen(ctx)) return;
+    // if(!checkVen(ctx)) return;
+    if(!await checkAdmin(ctx)) return ctx.reply("Permission denied");
 
     if(ctx.message?.video === undefined) throw "no video given";
     let PID = ctx.message.video.file_id;
@@ -285,7 +336,7 @@ const checkVen = (e: Context) => e.chat?.id == VenID;
 
 const getModMed = async (Media: string) =>
 {
-    let x = fs.readFileSync(path.join(__dirname, "..", "modmed.json"));
+    let x = fs.readFileSync(path.join(__dirname, "..", "data", "modmed.json"));
     console.log(x);
     let modmed = JSON.parse(x.toString()) as iModMed[];
     return modmed.find(x => x.file == Media)?.caption ?? undefined;
@@ -295,7 +346,7 @@ const HowMuchMedia = async (ctx: Context) =>
 {
     let locs: directories[] =  ["normal", "christmas", "newyear"];
     locs.forEach(loc => {
-        let Anzahl = fs.readdirSync(path.join(__dirname, "..", "pics", loc));
+        let Anzahl = fs.readdirSync(path.join(__dirname, "..", "data", "pics", loc));
 
         let med:media = {jpg: [], gif: [], mp4: []};
         
