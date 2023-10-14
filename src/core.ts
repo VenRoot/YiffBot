@@ -1,5 +1,6 @@
 import {Context} from "grammy";
 import {bot} from "./index";
+import * as secrets from "../secrets.json";
 import { getData, connect, storeData, deleteData, getAllData } from "./mariadb";
 
 
@@ -46,4 +47,16 @@ export const removeAdmin = async (userid: number) => {
     await connect();
     if(!await getData({userid})) throw new Error("User does not exist");
     await deleteData({userid});
+}
+
+export const getGroups = async () => {
+    const devMode = process.env.NODE_ENV === "development";
+
+    const channel = devMode ? secrets.devChannels.channel.id : secrets.channels.channel.id;
+    const group = devMode ? secrets.devChannels.group.id : secrets.channels.group.id;
+
+    return {
+        channel: channel,
+	    group: group
+    }
 }

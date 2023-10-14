@@ -72,13 +72,9 @@ bot.command("adduser", (e: Context) => {
     }
 });
 
-
-
-
-bot.on(':photo', async (e) =>  {if(!await checkAdmin(e)){return e.reply("Permission denied");} UploadPic(e)});
-bot.on(':animation', async (e) => {if(!await checkAdmin(e)){return e.reply("Permission denied");} UploadGif(e)});
-bot.on(':video', async (e) => {if(!await checkAdmin(e)){return e.reply("Permission denied");} UploadVid(e)});
-
+bot.on(":photo", async (e) => handleMedia(e, "photo"));
+bot.on(":animation", async (e) => handleMedia(e, "animation"));
+bot.on(":video", async (e) => handleMedia(e, "video"));
 
 bot.command("adduser", (e: Context) => {
     try
