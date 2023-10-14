@@ -5,20 +5,20 @@ import https from "https";
 dotenv.config();
 
 import { Bot, Context, InputFile } from "grammy";
-import { ReportError, checkAdmin } from './core';
+import { ReportError, addAdmin, checkAdmin, getGroups, getReverseToken, getToken, removeAdmin } from './core';
 import { iModMed, media } from './interface';
 //@ts-ignore
-import {VenID, groups} from "../secrets.json";
+import {VenID} from "../secrets.json";
 import s from "node-schedule";
 import { isChristmas, isNewYear, special } from './special';
 import { getAllData, getData, storeData } from './mariadb';
-import { downloadFile } from './modules/file';
+import { checkIfValid, downloadFile } from './modules/file';
 if(process.env.BOT_TOKEN === undefined) throw "No Bot_Token";
-export const bot = new Bot(process.env.BOT_TOKEN);
+export const bot = new Bot(getToken());
 
 bot.command("caption", (ctx: Context) => AddModMed(ctx));
 bot.command("start", (ctx: Context) => ctx.reply('You have to suck @Ventox2 dick now :3'));
-bot.command('sendman', async (ctx:Context) => {if(await checkAdmin(ctx)) {SendMedia("normal").then(() => ctx.reply("Media sent"))}});
+bot.command('sendman', async (ctx:Context) => {if(await checkAdmin(ctx)) {SendMedia("normal").then(() => ctx.reply("Media sent"))} else {ctx.reply("Permission denied")}});
 bot.command("sendmannewyear", (ctx: Context) => {if(checkVen(ctx)) {SendMedia("newyear")}});
 bot.command('ping', (e:Context) => e.reply("Pong"));
 bot.command('version', (e: Context) => e.reply(process.env.VERSION as string));
@@ -29,7 +29,7 @@ bot.command("unsetchristmas", (e: Context) => { if(!checkVen(e)){return;} specia
 bot.command("unsetnewyear", (e: Context) => { if(!checkVen(e)){return;} special.NewYear = false; e.reply("NewYear disabled")});
 
 bot.command("whichtime", (e:Context)=> {if(isNewYear(new Date())) { e.reply("newyear")} else if(isChristmas(new Date())) {e.reply("christmas")} else { e.reply("normal");}});
-bot.command('test', (e: Context) => bot.api.sendMessage(groups[0].id, "Testing"));
+//bot.command('test', (e: Context) => bot.api.sendMessage(groups[0].id, "Testing"));
 bot.command('status', (e: Context) => HowMuchMedia(e));
 
 async function handleMedia(e: Context, type: "photo" | "animation" | "video") {
@@ -58,13 +58,17 @@ bot.command("adduser", (e: Context) => {
 
         if(e.message?.text === undefined) return e.reply("No message text");
         if(e.message.text.split(" ").length < 2) return e.reply("No UserID");
+        if(e.message.text.split(" ").length < 3) return e.reply("No Name");
         let ID = e.message.text.split(" ")[1];
+        let name = e.message.text.split(" ")[2];
         if(ID === undefined) return e.reply("No UserID");
+        if(name === undefined) return e.reply("No Name");
         if(isNaN(parseInt(ID))) return e.reply("Invalid UserID");
     
-        storeData({userid: parseInt(ID)});
+        addAdmin(parseInt(ID), name).then(() => {
+            e.reply(`Added User ${name} with ID: ${ID}`);
+        })
     
-        e.reply(`Added UserID ${ID}`);
     }
     catch(err)
     {
@@ -72,36 +76,33 @@ bot.command("adduser", (e: Context) => {
     }
 });
 
-bot.on(":photo", async (e) => handleMedia(e, "photo"));
-bot.on(":animation", async (e) => handleMedia(e, "animation"));
-bot.on(":video", async (e) => handleMedia(e, "video"));
-
-bot.command("adduser", (e: Context) => {
-    try
-    {
+bot.command("removeuser", (e: Context) => {
+    try {
         if(!checkVen(e)) return e.reply("Permission denied");
 
         if(e.message?.text === undefined) return e.reply("No message text");
         if(e.message.text.split(" ").length < 2) return e.reply("No UserID");
         let ID = e.message.text.split(" ")[1];
+
         if(ID === undefined) return e.reply("No UserID");
         if(isNaN(parseInt(ID))) return e.reply("Invalid UserID");
-    
-        storeData({userid: parseInt(ID)});
-    
-        e.reply(`Added UserID ${ID}`);
-    }
-    catch(err)
-    {
+
+        removeAdmin(parseInt(ID)).then(() => {
+            e.reply(`Removed User with ID: ${ID}`);
+        })
+    } catch(err) {
         ReportError(err);
     }
-});
+})
 
+bot.on(":photo", async (e) => handleMedia(e, "photo"));
+bot.on(":animation", async (e) => handleMedia(e, "animation"));
+bot.on(":video", async (e) => handleMedia(e, "video"));
 
 
 
 bot.start({drop_pending_updates: process.env.DROP_PENDING_UPDATES === "true", onStart: () => {
-    console.log(VenID);
+    console.log("Started bot in "+getReverseToken(bot.token) + " mode");
     bot.api.sendMessage(VenID, "Bot started");
 }});
 
@@ -125,7 +126,8 @@ bot.api.setMyCommands([
     {command: "unsetchristmas", description: "Disable Christmas mode"},
     {command: "unsetnewyear", description: "Disable NewYear mode"},
     {command: "status", description: "Get the status of the bot"},
-    {command: "adduser", description: "Add a user to the bot by their ID"},
+    {command: "adduser", description: "Add an user to the bot by their ID"},
+    {command: "removeuser", description: "Remove an user from the bot by their ID"},
 ]);
 
 //Start the bot
@@ -150,29 +152,45 @@ process.on('uncaughtException', (err: any) => {
     process.kill(process.pid, 'SIGINT');
 });
 
-const SendMedia = async (directory: directories) => {
+const SendMedia = async (directory: directories, retries?: number): Promise<void> => {
 
     let Media = await getRandomMedia(directory);
+    const groups = getGroups();
     console.log(Media);
-    if(Media === null) return false;
+    if(Media === null) return;
+
+    const _path = path.join(__dirname, "..", "data", "pics", directory, Media);
+    let fuse = false;
+    try {
+        await checkIfValid(_path)
+    } catch(err) {
+        console.error(err);
+        fuse = true;
+        return;
+    }
+    if(fuse) {
+        if(retries && retries > 5) throw new Error("Too many retries trying to send media");
+        return SendMedia(directory, retries ? retries + 1 : 1);
+    }
+
     let modmed = await getModMed(Media);
     console.log(modmed);
         if(modmed !== undefined)
         {
             switch(path.extname(Media))
             {
-                case ".jpg": await bot.api.sendPhoto(groups[0].id, new InputFile(path.join(__dirname, "..", "data", "pics", directory, Media)), {caption: modmed} ); break;
-                case ".gif": await bot.api.sendAnimation(groups[0].id, new InputFile(path.join(__dirname, "..", "data", "pics", directory, Media)), {caption: modmed} ); break;
-                case ".mp4": await bot.api.sendVideo(groups[0].id, new InputFile(path.join(__dirname, "..", "data", "pics", directory, Media)), {caption: modmed} ); break;
+                case ".jpg": await bot.api.sendPhoto(groups.channel, new InputFile(_path), {caption: modmed} ); break;
+                case ".gif": await bot.api.sendAnimation(groups.channel, new InputFile(_path), {caption: modmed} ); break;
+                case ".mp4": await bot.api.sendVideo(groups.channel, new InputFile(_path), {caption: modmed} ); break;
             }
         }
         else
         {
             switch(path.extname(Media))
             {
-                case ".jpg": await bot.api.sendPhoto(groups[0].id, new InputFile(path.join(__dirname, "..", "data", "pics", directory, Media)) ); break;
-                case ".gif": await bot.api.sendAnimation(groups[0].id, new InputFile(path.join(__dirname, "..", "data", "pics", directory, Media)) ); break;
-                case ".mp4": await bot.api.sendVideo(groups[0].id, new InputFile(path.join(__dirname, "..", "data", "pics", directory, Media)) ); break;
+                case ".jpg": await bot.api.sendPhoto(groups.channel, new InputFile(_path) ); break;
+                case ".gif": await bot.api.sendAnimation(groups.channel, new InputFile(_path) ); break;
+                case ".mp4": await bot.api.sendVideo(groups.channel, new InputFile(_path) ); break;
             }
         }
     if(modmed != undefined) excludeFromModMed(Media);
@@ -266,12 +284,12 @@ const UploadPic = async (ctx: Context) =>
         }
     });
     if(fuse) return;
-    let link = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${(await bot.api.getFile(PID)).file_path}`;
+    let link = `https://api.telegram.org/file/bot${getToken()}/${file!.file_path}`;
     const filePath = path.join(__dirname, "..", "data", "pics", directory, `${PID}.jpg`);
     downloadFile(link, filePath).catch(err => {
         console.error(err);
         ctx.reply("Failed to download photo: " + err);
-    });
+    }).then(() => afterSubmission(ctx, filePath));
 }
 
 const UploadGif = async (ctx: Context) =>
@@ -293,12 +311,12 @@ const UploadGif = async (ctx: Context) =>
         }
     })
     if(fuse) return;
-    let link = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${(await bot.api.getFile(PID)).file_path}`;
+    let link = `https://api.telegram.org/file/bot${getToken()}/${file!.file_path}`;
     const filePath = path.join(__dirname, "..", "data", "pics", directory, `${PID}.gif`);
     downloadFile(link, filePath).catch(err => {
         console.error(err);
         ctx.reply("Failed to download gif: " + err);
-    });
+    }).then(() => afterSubmission(ctx, filePath));
 }
 
 const UploadVid = async (ctx: Context) =>
@@ -320,11 +338,24 @@ const UploadVid = async (ctx: Context) =>
         }
     });
     if(fuse) return;
-    let link = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${(await bot.api.getFile(PID)).file_path}`;
+    let link = `https://api.telegram.org/file/bot${getToken()}/${file!.file_path}`;
     const filePath = path.join(__dirname, "..", "data", "pics", directory, `${PID}.mp4`);
     downloadFile(link, filePath).catch(err => {
         console.error(err);
         ctx.reply("Failed to download video: " + err);
+    }).then(() => afterSubmission(ctx, filePath));
+}
+
+function afterSubmission(ctx: Context, filePath: string) {
+    checkIfValid(filePath).catch(err => {
+        console.error(err);
+        ctx.reply("File is empty... deleting file " + err, {reply_to_message_id: ctx.message?.message_id});
+        fs.unlink(filePath, (err) => {
+            if(err) { 
+                console.error(err);
+                ctx.reply("Failed to delete file: " + err, {reply_to_message_id: ctx.message?.message_id});
+            }
+        })
     });
 }
 

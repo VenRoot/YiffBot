@@ -14,10 +14,12 @@ export const checkAdmin = async (ctx: Context) => {
     const userid = ctx.message?.from?.id;
     if(!userid) return false;
     const user = await getData({userid});
-    console.log(user !== null);
+    if(user === null) return false;
 
-    if(user !== null) return true;
-    return false;
+
+    console.log(`Found user ${user.userid} in database`);
+    return true;
+
 }
 
 export const ReportError = async (ctx: Context | any) => {
@@ -37,10 +39,10 @@ class AlreadyExistsError extends Error {
     }
 }
 
-export const addAdmin = async (userid: number) => {
+export const addAdmin = async (userid: number, name: string) => {
     await connect();
     if(await getData({userid})) throw new AlreadyExistsError("User already exists");
-    await storeData({userid});
+    await storeData({userid, name});
 }
 
 export const removeAdmin = async (userid: number) => {
@@ -49,14 +51,42 @@ export const removeAdmin = async (userid: number) => {
     await deleteData({userid});
 }
 
-export const getGroups = async () => {
-    const devMode = process.env.NODE_ENV === "development";
+export const getGroups = () => {
+    const mode = getMode();
+    let channel: number;
+    let group: number;
 
-    const channel = devMode ? secrets.devChannels.channel.id : secrets.channels.channel.id;
-    const group = devMode ? secrets.devChannels.group.id : secrets.channels.group.id;
+    if(mode === "development") {
+        channel = secrets.devChannels.channel.id;
+        group = secrets.devChannels.group.id;
+    } else if(mode === "beta") {
+        channel = secrets.betaChannels.channel.id;
+        group = secrets.betaChannels.group.id;
+    } else {
+        // Return production values if not dev or beta
+        channel = secrets.channels.channel.id;
+        group = secrets.channels.group.id;
+    }
 
     return {
         channel: channel,
 	    group: group
     }
+}
+
+export const getReverseToken = (token: string) => {
+    if(token === process.env.BOT_TOKEN_DEV) return "DEV";
+    if(token === process.env.BOT_TOKEN_BETA) return "BETA";
+    return "PROD";
+}
+
+export const getToken = () => {
+    const mode = getMode();
+    if(mode === "development") return process.env.BOT_TOKEN_DEV as string;
+    if(mode === "beta") return process.env.BOT_TOKEN_BETA as string;
+    return process.env.BOT_TOKEN as string;
+}
+
+export const getMode = () => {
+    return process.env.NODE_ENV as "development" | "production" | "beta";
 }

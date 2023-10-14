@@ -2,6 +2,7 @@ import mariadb from 'mariadb';
 
 interface User {
     userid: number;
+    name: string;
 }
 
 if(!process.env.DB_HOST ||
@@ -59,7 +60,7 @@ async function storeData(data: User)
     try
     {
         con = await connect();
-        let result = await con.query("INSERT INTO users (userid) VALUES (?)", [data.userid]);
+        data.name ? await con.query("INSERT INTO users (userid, name) VALUES (?, ?)", [data.userid, data.name]) : await con.query("INSERT INTO users (userid) VALUES (?)", [data.userid]);
 
     }
     catch(err)
@@ -72,13 +73,13 @@ async function storeData(data: User)
     }
 }
 
-async function deleteData(query: User)
+async function deleteData(query: Partial<User>)
 {
     let con: mariadb.PoolConnection | undefined;
     try
     {
         con = await connect();
-        let result = await con.query("DELETE FROM users WHERE userid=?", [query.userid]);
+        await con.query("DELETE FROM users WHERE userid=?", [query.userid]);
     }
     catch(err)
     {
@@ -90,16 +91,14 @@ async function deleteData(query: User)
     }
 }
 
-async function getData(query: User)
+async function getData(query: Partial<User>)
 {
     let con: mariadb.PoolConnection | undefined;
     try
     {
         con = await connect();
         console.log("SELECT * FROM users WHERE userid="+query.userid);
-        const result = await con.query<User[]>("SELECT * FROM users WHERE userid=?", [query.userid]);
-        console.log(result);
-        
+        const result = await con.query<User[]>("SELECT * FROM users WHERE userid=?", [query.userid]);        
         if(result.length === 0) return null;
         return result[0];
     }
@@ -127,7 +126,6 @@ async function getAllData()
         {
             results.push(user.userid);
         }
-        debugger;
         return results;
     }
     catch(err)
@@ -149,9 +147,12 @@ export {
 
 
 setTimeout(() => {
-    console.log("STARTING HEALTH CHECK");
-    console.log(process.env.DB_HOST, process.env.DB_USER, process.env.DB_PASS, process.env.DB_NAME, process.env.DB_PORT)
+    console.log("Starting health check...");
+    console.time("HEALTH CHECK");
     healthCheck().catch(err => {
         throw new Error("STARTUP: Failed to connect to database" + err)
+    }).then(res => {
+        console.log("HEALTH CHECK SUCCESSFUL");
+        console.timeEnd("HEALTH CHECK");
     })
-}, 1000);
+}, 100);
