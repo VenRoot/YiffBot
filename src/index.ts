@@ -159,6 +159,7 @@ const SendMedia = async (directory: directories, retries?: number): Promise<void
     console.log(Media);
     if(Media === null) return;
 
+    fs.mkdirSync(path.join(__dirname, "..", "data", "pics", directory), {recursive: true});
     const _path = path.join(__dirname, "..", "data", "pics", directory, Media);
     let fuse = false;
     try {
@@ -200,7 +201,7 @@ const SendMedia = async (directory: directories, retries?: number): Promise<void
 
 const getRandomMedia = async (dir: directories) =>
 {
-
+    fs.mkdirSync(path.join(__dirname, "..", "data", "pics", dir), {recursive: true});
     let x = fs.readdirSync(path.join(__dirname, "..", "data", "pics", dir));
 
     let admins = await getAllData();
@@ -373,6 +374,7 @@ const HowMuchMedia = async (ctx: Context) =>
 {
     let locs: directories[] =  ["normal", "christmas", "newyear"];
     locs.forEach(loc => {
+        fs.mkdirSync(path.join(__dirname, "..", "data", "pics", loc), {recursive: true});
         let Anzahl = fs.readdirSync(path.join(__dirname, "..", "data", "pics", loc));
 
         let med:media = {jpg: [], gif: [], mp4: []};

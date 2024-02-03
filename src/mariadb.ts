@@ -40,7 +40,7 @@ async function healthCheck() {
         // Check if database exists
         await con.query("CREATE DATABASE IF NOT EXISTS yiffslut");
         await con.query("USE yiffslut");
-        await con.query("CREATE TABLE IF NOT EXISTS users (userid BIGINT PRIMARY KEY)");
+        await con.query("CREATE TABLE IF NOT EXISTS users (userid BIGINT PRIMARY KEY, name VARCHAR(255))");
         return true;
     }
     catch(err)
@@ -65,7 +65,7 @@ async function storeData(data: User)
     }
     catch(err)
     {
-        throw new Error("Failed to store data");
+        throw new Error("Failed to store data: "+JSON.stringify(err));
     }
     finally
     {
