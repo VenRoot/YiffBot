@@ -7,6 +7,7 @@ services:
     restart: always
     volumes:
       - yiffslutdata:/app/data
+      - ./secrets.json:/app/secrets.json
     environment:
       TZ: Europe/Berlin
       DB_HOST: mariadb
