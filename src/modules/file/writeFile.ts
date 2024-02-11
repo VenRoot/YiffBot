@@ -1,6 +1,7 @@
 import fs from "fs";
 import http from "http";
 
+/* c8 ignore start */
 export function writeFile(file: fs.WriteStream, response: http.IncomingMessage): Promise<void> {
     return new Promise((resolve, reject) => {
         response.pipe(file);
@@ -21,3 +22,4 @@ export function writeFile(file: fs.WriteStream, response: http.IncomingMessage):
             });
     })
 }
+/* c8 ignore end */

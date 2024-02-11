@@ -8,7 +8,7 @@ export function downloadFile(link: string, filePath: string) {
 
         https.get(link, (response) => {
             if(response.statusCode !== 200) {
-                return reject(new Error(`Request ${link} Failed with ${response.statusCode}`));
+                return reject(new InvalidStatusCode(link, response.statusCode));
             }
  
             writeFile(file, response).then(resolve).catch((err) => {
@@ -17,4 +17,10 @@ export function downloadFile(link: string, filePath: string) {
             })
         }).on("error", (err) => reject(new Error(`Failed to request ${link}: ${err.message}`)))
     })
+}
+
+export class InvalidStatusCode extends Error {
+    constructor(link: string, statusCode?: number) {
+        statusCode ? super(`Request ${link} Failed with ${statusCode}`) : super(`Request ${link} Failed`);
+    }
 }

@@ -34,6 +34,9 @@ devDependencies:
   '@jest/globals':
     specifier: ^29.7.0
     version: 29.7.0
+  '@types/jest':
+    specifier: ^29.5.12
+    version: 29.5.12
   '@types/node':
     specifier: ^18.0.3
     version: 18.19.14
@@ -660,6 +663,13 @@ packages:
     resolution: {integrity: sha512-pk2B1NWalF9toCRu6gjBzR69syFjP4Od8WRAX+0mmf9lAjCRicLOWc+ZrxZHx/0XRjotgkF9t6iaMJ+aXcOdZQ==}
     dependencies:
       '@types/istanbul-lib-report': 3.0.3
+
+  /@types/jest@29.5.12:
+    resolution: {integrity: sha512-eDC8bTvT/QhYdxJAulQikueigY5AsdBRH2yDKW3yveW7svY3+DzN84/2NUgkw10RTiJbWqZrTtoGVdYlvFJdLw==}
+    dependencies:
+      expect: 29.7.0
+      pretty-format: 29.7.0
+    dev: true
 
   /@types/node-schedule@2.1.5:
     resolution: {integrity: sha512-bN0MiplDBUxNMmlEi4iykjLYD7+Ze3DEevzliCn8WYuDwYSPj/5XFh8wZw+YXPLpLxiNWlIONYiQ67g/vowSMA==}

@@ -1,17 +1,12 @@
 import {Context} from "grammy";
-import {bot} from "./index";
-import * as secrets from "../secrets.json";
+import fs from "fs";
+import path from "path";
 import { getData, connect, storeData, deleteData, getAllData } from "./mariadb";
+import { bot, getMode } from "./bot";
+import type Secrets from "./secrets.interface";
 
 
-// export const checkAdmin = (ctx: Context) => {
-//     if(ctx.message === undefined) throw "no message";
-//     if(ctx.message.from === undefined) throw "no message owner";
-//     return ctx.message.from.id === VenID;
-// }
-
-export const checkAdmin = async (ctx: Context) => {
-    const userid = ctx.message?.from?.id;
+export const checkAdmin = async (userid: number) => {
     if(!userid) return false;
     const user = await getData({userid});
     if(user === null) return false;
@@ -51,21 +46,26 @@ export const removeAdmin = async (userid: number) => {
     await deleteData({userid});
 }
 
+let secrets: Secrets | null  = null; 
+
 export const getGroups = () => {
+
+    const _secrets = secrets ?? JSON.parse(fs.readFileSync(path.join(__dirname, "..", "secrets.json")).toString()) as Secrets;
+    secrets = _secrets;
     const mode = getMode();
     let channel: number;
     let group: number;
 
     if(mode === "development") {
-        channel = secrets.devChannels.channel.id;
-        group = secrets.devChannels.group.id;
+        channel = _secrets.devChannels.channel.id;
+        group = _secrets.devChannels.group.id;
     } else if(mode === "beta") {
-        channel = secrets.betaChannels.channel.id;
-        group = secrets.betaChannels.group.id;
+        channel = _secrets.betaChannels.channel.id;
+        group = _secrets.betaChannels.group.id;
     } else {
         // Return production values if not dev or beta
-        channel = secrets.channels.channel.id;
-        group = secrets.channels.group.id;
+        channel = _secrets.channels.channel.id;
+        group = _secrets.channels.group.id;
     }
 
     return {
@@ -78,15 +78,4 @@ export const getReverseToken = (token: string) => {
     if(token === process.env.BOT_TOKEN_DEV) return "DEV";
     if(token === process.env.BOT_TOKEN_BETA) return "BETA";
     return "PROD";
-}
-
-export const getToken = () => {
-    const mode = getMode();
-    if(mode === "development") return process.env.BOT_TOKEN_DEV as string;
-    if(mode === "beta") return process.env.BOT_TOKEN_BETA as string;
-    return process.env.BOT_TOKEN as string;
-}
-
-export const getMode = () => {
-    return process.env.NODE_ENV as "development" | "production" | "beta";
 }

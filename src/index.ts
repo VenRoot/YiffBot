@@ -4,8 +4,8 @@ import path from "path";
 import https from "https";
 dotenv.config();
 
-import { Bot, Context, InputFile } from "grammy";
-import { ReportError, addAdmin, checkAdmin, getGroups, getReverseToken, getToken, removeAdmin } from './core';
+import { Context, InputFile } from "grammy";
+import { ReportError, addAdmin, checkAdmin, getGroups, getReverseToken, removeAdmin } from './core';
 import { iModMed, media } from './interface';
 //@ts-ignore
 import {VenID} from "../secrets.json";
@@ -14,11 +14,11 @@ import { isChristmas, isNewYear, special } from './special';
 import { getAllData, getData, storeData } from './mariadb';
 import { checkIfValid, downloadFile } from './modules/file';
 if(process.env.BOT_TOKEN === undefined) throw "No Bot_Token";
-export const bot = new Bot(getToken());
+import { bot, getToken } from './bot';
 
 bot.command("caption", (ctx: Context) => AddModMed(ctx));
 bot.command("start", (ctx: Context) => ctx.reply('You have to suck @Ventox2 dick now :3'));
-bot.command('sendman', async (ctx:Context) => {if(await checkAdmin(ctx)) {SendMedia("normal").then(() => ctx.reply("Media sent"))} else {ctx.reply("Permission denied")}});
+bot.command('sendman', async (ctx:Context) => {if(await checkAdmin(ctx.message?.from.id ?? -1)) {SendMedia("normal").then(() => ctx.reply("Media sent"))} else {ctx.reply("Permission denied")}});
 bot.command("sendmannewyear", (ctx: Context) => {if(checkVen(ctx)) {SendMedia("newyear")}});
 bot.command('ping', (e:Context) => e.reply("Pong"));
 bot.command('version', (e: Context) => e.reply(process.env.VERSION as string));
@@ -35,7 +35,7 @@ bot.command('status', (e: Context) => HowMuchMedia(e));
 async function handleMedia(e: Context, type: "photo" | "animation" | "video") {
     if(!isInDM(e)) return;
 
-    if(!await checkAdmin(e)) return e.reply("Permission denied");
+    if(!await checkAdmin(e.message?.from.id ?? -1)) return e.reply("Permission denied");
 
     switch(type) {
         case "photo":
@@ -273,7 +273,7 @@ const UploadPic = async (ctx: Context) =>
     let fuse = false;
     if(special.Christmas) directory = "christmas";
     else if(special.NewYear) directory = "newyear";
-    if(!await checkAdmin(ctx)) return ctx.reply("Permission denied");
+    if(!await checkAdmin(ctx.message?.from.id ?? -1)) return ctx.reply("Permission denied");
 
     if(ctx.message?.photo === undefined) throw "no photo given";
     let PID = ctx.message.photo[ctx.message.photo.length-1].file_id;
@@ -300,7 +300,7 @@ const UploadGif = async (ctx: Context) =>
     if(special.Christmas) directory = "christmas";
     else if(special.NewYear) directory = "newyear";
     // if(!checkVen(ctx)) return;
-    if(!await checkAdmin(ctx)) return ctx.reply("Permission denied");
+    if(!await checkAdmin(ctx.message?.from.id ?? -1)) return ctx.reply("Permission denied");
 
     if(ctx.message?.animation === undefined) throw "no gif given";
     let PID = ctx.message.animation.file_id;
@@ -327,7 +327,7 @@ const UploadVid = async (ctx: Context) =>
     if(special.Christmas) directory = "christmas";
     else if(special.NewYear) directory = "newyear";
     // if(!checkVen(ctx)) return;
-    if(!await checkAdmin(ctx)) return ctx.reply("Permission denied");
+    if(!await checkAdmin(ctx.message?.from.id ?? -1)) return ctx.reply("Permission denied");
 
     if(ctx.message?.video === undefined) throw "no video given";
     let PID = ctx.message.video.file_id;
