@@ -1,14 +1,14 @@
 import {Context} from "grammy";
 import fs from "fs";
 import path from "path";
-import { getData, connect, storeData, deleteData, getAllData } from "./mariadb";
+import { databaseService } from "./mariadb";
 import { bot, getMode } from "./bot";
 import type Secrets from "./secrets.interface";
 
 
 export const checkAdmin = async (userid: number) => {
     if(!userid) return false;
-    const user = await getData({userid});
+    const user = await databaseService.getData({userid});
     if(user === null) return false;
 
 
@@ -19,11 +19,11 @@ export const checkAdmin = async (userid: number) => {
 
 export const ReportError = async (ctx: Context | any) => {
     // if(toVen) bot.api.sendMessage(VenID, JSON.stringify(ctx));
-    const admins = await getAllData();
+    const admins = await databaseService.getAllData();
     if(!admins) return;
     for(const admin of admins) {
-        bot.api.sendMessage(admin, "An Error ocurred: "+JSON.stringify(ctx));
-        bot.api.sendMessage(admin, JSON.stringify(new Error().stack));
+        bot.api.sendMessage(admin.userid, "An Error ocurred: "+JSON.stringify(ctx));
+        bot.api.sendMessage(admin.userid, JSON.stringify(new Error().stack));
     }
 }
 
@@ -35,15 +35,13 @@ class AlreadyExistsError extends Error {
 }
 
 export const addAdmin = async (userid: number, name: string) => {
-    await connect();
-    if(await getData({userid})) throw new AlreadyExistsError("User already exists");
-    await storeData({userid, name});
+    if(await databaseService.getData({userid})) throw new AlreadyExistsError("User already exists");
+    await databaseService.storeData({userid, name});
 }
 
 export const removeAdmin = async (userid: number) => {
-    await connect();
-    if(!await getData({userid})) throw new Error("User does not exist");
-    await deleteData({userid});
+    if(!await databaseService.getData({userid})) throw new Error("User does not exist");
+    await databaseService.deleteData({userid});
 }
 
 let secrets: Secrets | null  = null; 

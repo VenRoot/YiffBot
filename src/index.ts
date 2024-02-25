@@ -11,7 +11,7 @@ import { iModMed, media } from './interface';
 import {VenID} from "../secrets.json";
 import s from "node-schedule";
 import { isChristmas, isNewYear, special } from './special';
-import { getAllData, getData, storeData } from './mariadb';
+import { databaseService } from './mariadb';
 import { checkIfValid, downloadFile } from './modules/file';
 if(process.env.BOT_TOKEN === undefined) throw "No Bot_Token";
 import { bot, getToken } from './bot';
@@ -204,16 +204,16 @@ const getRandomMedia = async (dir: directories) =>
     fs.mkdirSync(path.join(__dirname, "..", "data", "pics", dir), {recursive: true});
     let x = fs.readdirSync(path.join(__dirname, "..", "data", "pics", dir));
 
-    let admins = await getAllData();
+    let admins = await databaseService.getAllData();
     if(admins === null)
     {
-        admins = [VenID];
+        admins = [{name: "Ven", userid: VenID}];
     }
 
     if(x.length < 10)
     {
         admins.forEach(async (admin) => {
-            await bot.api.sendMessage(admin, `Achtung! Nur noch ${x.length} Medien! Bitte nachfüllen`).catch(async err => {
+            await bot.api.sendMessage(admin.userid, `Achtung! Nur noch ${x.length} Medien! Bitte nachfüllen`).catch(async err => {
                 await bot.api.sendMessage(VenID, `Konnte Nachricht an Admin ${admin} nicht senden: RawError: ${JSON.stringify(err)}`);
             })
         });
@@ -222,7 +222,7 @@ const getRandomMedia = async (dir: directories) =>
     if (x.length == 0)
     {
       admins.forEach(async (admin) => {
-          await bot.api.sendMessage(admin, `Ordner ist leer`).catch(async err => {
+          await bot.api.sendMessage(admin.userid, `Ordner ist leer`).catch(async err => {
             await bot.api.sendMessage(VenID, `Konnte Nachricht an Admin ${admin} nicht senden: RawError: ${JSON.stringify(err)}`);
           });
       });

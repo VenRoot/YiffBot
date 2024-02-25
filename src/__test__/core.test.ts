@@ -4,9 +4,11 @@ process.env.DB_NAME = "xxxx";
 process.env.DB_PORT = "xxxx";
 process.env.DB_USER = "xxxx";
 import * as bot from "../bot";
+import "mariadb";
+import mariadb from "../__mocks__/mariadb";
+import { queryMock, createPool, pingMock, getConnectionMock } from "../__mocks__/mariadb";
+import { databaseService } from "../mariadb";
 jest.spyOn(bot, "getToken").mockImplementation(() => "test");
-
-import * as db from "../mariadb";
 
 
 import * as core from "../core";
@@ -23,7 +25,7 @@ jest.mock("grammy", () => ({
         on = jest.fn();
         api = {
             call: jest.fn(),
-            sendMessage: jest.fn().mockImplementation(async (chatId, text) => console.log(chatId, text))
+            sendMessage: jest.fn().mockImplementation(async (chatId, text) => {})
         }
     }
 }));
@@ -40,36 +42,54 @@ jest.mock("../core", () => ({
 
 
 describe('checkAdmin', () => {
-    let getDataSpy: jest.SpyInstance;
-    let connectSpy: jest.SpyInstance;
     beforeAll(() => {
-        connectSpy = jest.spyOn(db, "databaseService").mockImplementation(async () => Promise.resolve({
-            query: async () => Promise.resolve({
-                length: 1,
-                rows: [{
-                    userid: -1,
-                    name: "test",
-                }]
-            }),
-            ...jest.requireActual("mariadb").PoolConnection
-        } as mariadb.PoolConnection));
-
-        // getDataSpy = jest.spyOn(db, "getData").mockImplementation(async () => Promise.resolve({
-        //     userid: -1,
-        //     name: "test",
-        // }));
+        pingMock.mockClear();
+        queryMock.mockImplementation(() => Promise.reject()); // Should be implemented for each test
+        getConnectionMock.mockClear();
+        createPool.mockClear();
     });
 
     afterAll(() => {
-        // getDataSpy.mockRestore();
-        connectSpy.mockRestore();
+        queryMock.mockClear();
     });
 
     it("should return true if the user is an admin", async () => {
+        queryMock.mockImplementation(() => Promise.resolve([{ userid: -1, name: "Test User" }] as User[]));
         await expect(core.checkAdmin(-1)).resolves.toBe(true);
     });
 
     it("should return false if the user is not an admin", async () => {
+        queryMock.mockImplementation(() => Promise.resolve([] as User[]));
         await expect(core.checkAdmin(1)).resolves.toBe(false);
     });
- })
+    it("should return false if no user is passed", async () => {
+        await expect(core.checkAdmin(null as any)).resolves.toBe(false);
+    });
+});
+
+describe('ReportError', () => {
+    let sendMessageSpy: jest.SpyInstance;
+    beforeAll(() => {
+        sendMessageSpy = jest.spyOn(bot.bot.api, "sendMessage");
+        pingMock.mockClear();
+        queryMock.mockImplementation(() => Promise.resolve([{userid: 1}, {userid: 2}] as User[])); // Should be implemented for each test
+        getConnectionMock.mockClear();
+        createPool.mockClear();
+    });
+
+    afterAll(() => {
+        sendMessageSpy.mockReset();
+        queryMock.mockClear();
+    });
+
+    it("should send a message to all admins", async () => {
+        await core.ReportError({ chat: { id: 1 } });
+        expect(queryMock).toHaveBeenCalled();
+        expect(sendMessageSpy).toHaveBeenCalledTimes(4);
+    });
+})
+
+interface User {
+    userid: number;
+    name: string;
+}

@@ -21,6 +21,6 @@ export function downloadFile(link: string, filePath: string) {
 
 export class InvalidStatusCode extends Error {
     constructor(link: string, statusCode?: number) {
-        statusCode ? super(`Request ${link} Failed with ${statusCode}`) : super(`Request ${link} Failed`);
+        super(`Request ${link} Failed with ${statusCode ?? 0}`);
     }
 }
