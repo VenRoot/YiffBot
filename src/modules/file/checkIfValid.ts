@@ -1,4 +1,5 @@
 import fs from "fs";
+import { AnyError, EmptyFileError, NotAFileError } from "../exceptions";
 
 /**
  * 
@@ -9,9 +10,9 @@ import fs from "fs";
 export async function checkIfValid(filePath: string) {
     return new Promise<void>((resolve, reject) => {
         fs.stat(filePath, (err, stats) => {
-            if(err) return reject(err);
-            if(!stats.isFile()) return reject(new Error("Path is not a file"));
-            if(stats.size === 0) return reject(new Error("File is empty"));
+            if(err) return reject(new AnyError(err));
+            if(!stats.isFile()) return reject(new NotAFileError());
+            if(stats.size === 0) return reject(new EmptyFileError());
             resolve();
         })
     })

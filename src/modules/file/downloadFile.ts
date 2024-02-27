@@ -1,6 +1,7 @@
 import fs from "fs";
 import https from "https";
 import { writeFile } from "./writeFile";
+import { InvalidStatusCode } from "../exceptions";
 
 export function downloadFile(link: string, filePath: string) {
     return new Promise((resolve, reject) => {
@@ -19,8 +20,3 @@ export function downloadFile(link: string, filePath: string) {
     })
 }
 
-export class InvalidStatusCode extends Error {
-    constructor(link: string, statusCode?: number) {
-        super(`Request ${link} Failed with ${statusCode ?? 0}`);
-    }
-}

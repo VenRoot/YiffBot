@@ -1,10 +1,11 @@
 // FILEPATH: /home/ven/Projekte/Privat/YiffBot/src/__test__/file.test.ts
 
-import { downloadFile, InvalidStatusCode, checkIfValid } from '../modules/file';
+import { downloadFile, checkIfValid } from '../modules/file';
 import fs from 'fs';
 import * as writeFile from "../modules/file/writeFile"
 import nock from 'nock';
 import https from 'https';
+import { InvalidStatusCode } from '../modules/exceptions';
 jest.mock('fs', () => ({
     ...jest.requireActual("fs"), // Import the actual functions of fs
     writeFileSync: jest.fn(), // Override the actual writeFile function

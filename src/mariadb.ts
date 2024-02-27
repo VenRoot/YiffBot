@@ -1,5 +1,6 @@
 import mariadb from 'mariadb';
 import { checkEnvVariables } from './modules/envs';
+import { DBError } from './modules/exceptions';
 
 interface User {
     userid: number;
@@ -42,6 +43,7 @@ class DatabaseService implements Disposable {
         }
         return this.pool.getConnection();
     }
+    /** @throws {DBError} */
     public async storeData(data: Partial<User> & {userid: number}): Promise<void> {
         let con: mariadb.PoolConnection | undefined;
         try {
@@ -52,13 +54,14 @@ class DatabaseService implements Disposable {
         }
         catch(err) {
             console.error("Failed to store data:", err);
-            throw err;
+            throw new DBError(err, "store");
         }
         finally {
             con?.release();
         }
         
     }
+    /** @throws {DBError} */
     public async deleteData(query: Partial<User> & {userid: number}) {
         let con: mariadb.PoolConnection | undefined;
         try {
@@ -67,12 +70,13 @@ class DatabaseService implements Disposable {
         }
         catch(err) {
             console.error("Failed to delete data:", err);
-            throw err;
+            throw new DBError(err, "delete");
         }
         finally {
             con?.release();
         }
     }
+    /** @throws {DBError} */
     public async getData(query: Partial<User> & {userid: number}): Promise<User | null> {
         let con: mariadb.PoolConnection | undefined;
         try {
@@ -82,12 +86,13 @@ class DatabaseService implements Disposable {
         }
         catch(err) {
             console.error("Failed to get data:", err);
-            throw err;
+            throw new DBError(err, "get");
         }
         finally {
             con?.release();
         }
     }
+    /** @throws {DBError} */
     public async getAllData() {
         let con: mariadb.PoolConnection | undefined;
         const results: User[] = [];
@@ -102,7 +107,7 @@ class DatabaseService implements Disposable {
         }
         catch(err) {
             console.error("Failed to get data:", err);
-            throw err;
+            throw new DBError(err, "get");
         }
         finally {
             con?.release();
