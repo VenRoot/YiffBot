@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs from "fs/promises";
 import path from "path";
 
 import { Context } from "grammy";
@@ -8,22 +8,21 @@ import { NoCaptionError, NoReplyToDocumentError, NotDirectMessageError, Permissi
 import { getAutomaticMediaObject, getMediaObject } from "./media";
 import { iModMed } from "../interface";
 
-export function add(ctx: Context) {
+export async function add(ctx: Context) {
     if(!isDirectMessage(ctx)) throw new NotDirectMessageError();
-    if(!ctx.message?.reply_to_message?.document) throw new NoReplyToDocumentError();
-    if(!checkAdmin(ctx.message?.from.id ?? -1)) throw new PermissionDeniedError();
+    if(!ctx.message?.reply_to_message?.photo && !ctx.message?.reply_to_message?.video && !ctx.message?.reply_to_message?.animation) throw new NoReplyToDocumentError();
+    if(!await checkAdmin(ctx.message?.from.id ?? -1)) throw new PermissionDeniedError();
 
-    let Media = getAutomaticMediaObject(ctx.message);
+    let Media = getAutomaticMediaObject(ctx.message.reply_to_message);
     let Caption = extractCommandArgument(ctx.message);
     if(!Caption || Caption.length === 0) throw new NoCaptionError();
-
-    save(Media.file_id, Caption);
+    await save(Media.media.file_id, Caption);
 }
 
 async function save(Media: string, Caption: string) {
     const filePath = path.join(__dirname, "..", "data", "modmed.json");
-    let x = fs.readFileSync(filePath);
+    const x = await fs.readFile(filePath);
     let modmed = JSON.parse(x.toString()) as iModMed[];
     modmed.push({file: Media, caption: Caption});
-    fs.writeFileSync(filePath, JSON.stringify(modmed));
+    await fs.writeFile(filePath, JSON.stringify(modmed));
 }

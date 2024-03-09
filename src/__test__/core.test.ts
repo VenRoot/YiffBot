@@ -7,8 +7,7 @@ import * as bot from "../bot";
 import "mariadb";
 import mariadb from "../__mocks__/mariadb";
 import { queryMock, createPool, pingMock, getConnectionMock } from "../__mocks__/mariadb";
-import { databaseService } from "../mariadb";
-jest.spyOn(bot, "getToken").mockImplementation(() => "test");
+jest.spyOn(bot, "getToken").mockImplementation(() => "INVALID");
 
 
 import * as core from "../core";
@@ -38,8 +37,7 @@ jest.mock("../index.ts", () => ({
 jest.mock("../core", () => ({
     getToken: jest.fn(),
     ...jest.requireActual("../core")
-}))
-
+}));
 
 describe('checkAdmin', () => {
     beforeAll(() => {

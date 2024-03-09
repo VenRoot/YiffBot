@@ -1,8 +1,9 @@
 import fs from "fs";
 import https from "https";
 import { writeFile } from "./writeFile";
-import { InvalidStatusCode } from "../exceptions";
+import { InvalidStatusCode, HttpError } from "../exceptions";
 
+/** @throws {InvalidStatusCode | HttpError} */
 export function downloadFile(link: string, filePath: string) {
     return new Promise((resolve, reject) => {
         const file = fs.createWriteStream(filePath);
@@ -16,7 +17,7 @@ export function downloadFile(link: string, filePath: string) {
                 file.close();
                 fs.unlink(filePath ,() => reject(err)); // Delete file, since download failed
             })
-        }).on("error", (err) => reject(new Error(`Failed to request ${link}: ${err.message}`)))
+        }).on("error", (err) => reject(new HttpError(`Failed to request ${link}: ${err.message}`)))
     })
 }
 

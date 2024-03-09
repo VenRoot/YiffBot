@@ -99,8 +99,10 @@ export class InvalidParamsError extends Error {
 }
 
 export class OutOfRetiesError extends Error {
-    constructor(message: string) {
+    public retries: number;
+    constructor(message: string, retries: number) {
         super(message);
+        this.retries = retries;
         this.name = "OutOfRetiesError";
     }
 }
@@ -111,6 +113,34 @@ export class DBError extends Error {
         super(erroObj);
         this.type = type;
         this.name = "DBError";
+    }
+}
+
+export class InvalidMediaError extends Error {
+    constructor() {
+        super("Invalid Media");
+        this.name = "InvalidMediaError";
+    }
+}
+
+export class NoReplyToMessageError extends Error {
+    constructor() {
+        super("No reply to message");
+        this.name = "NoReplyToMessageError";
+    }
+}
+
+export class NoMediaError extends Error {
+    constructor(type: string) {
+        super(`No valid media. Recieved ${type}`);
+        this.name = "NoMediaError";
+    }
+}
+
+export class HttpError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "HttpError";
     }
 }
 

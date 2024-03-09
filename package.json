@@ -19,7 +19,8 @@
     "mariadb": "^3.2.0",
     "mongo": "^0.1.0",
     "nock": "^13.5.1",
-    "node-schedule": "^2.1.0"
+    "node-schedule": "^2.1.0",
+    "telegram-test-api": "^4.2.1"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",

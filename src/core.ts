@@ -1,5 +1,6 @@
 import {Context} from "grammy";
-import fs from "fs";
+import _fs from "fs";
+import fs from "fs/promises";
 import path from "path";
 import { databaseService } from "./mariadb";
 import { bot, getMode } from "./bot";
@@ -7,6 +8,7 @@ import type Secrets from "./secrets.interface";
 import { AlreadyExistsError, DBError, InvalidParamsError, MissingParamsError, NoMessageError, NotDirectMessageError, PermissionDeniedError } from "./modules/exceptions";
 import { Message, Update } from "grammy/types";
 import { VenID } from "../secrets.json";
+import { iModMed } from "./interface";
 
 
 export const checkAdmin = async (userid: number) => {
@@ -23,6 +25,7 @@ export async function notifyAdmins(admins: { userid: number; name: string }[], m
     for (const admin of admins) {
       try {
         await bot.api.sendMessage(admin.userid, message);
+        /* c8 ignore next 3 */
       } catch (err) {
         await bot.api.sendMessage(VenID, `Konnte Nachricht an Admin ${admin.name} nicht senden: RawError: ${JSON.stringify(err)}`);
       }
@@ -40,6 +43,18 @@ export const ReportError = async (ctx: Context | any) => {
         bot.api.sendMessage(admin.userid, JSON.stringify(new Error().stack));
     }
 }
+
+export const saveModMed = async (fileIdWithExt: string, Caption: string) =>
+{
+    const _path = path.join(__dirname, "..", "data", "modmed.json");
+    let x = await fs.readFile(_path);
+    let modmed = JSON.parse(x.toString()) as iModMed[];
+    modmed.push({file: fileIdWithExt, caption: Caption});
+    fs.writeFile(_path, JSON.stringify(modmed)).catch((err) => {
+        //Handle error here
+    })
+}
+
 
 export function extractCommandArgument(msg: (Message & Update.NonChannel)) {
     return msg.text?.split(" ").slice(1).join(" ");
@@ -61,14 +76,19 @@ export const removeAdmin = async (userid: number) => {
 
 let secrets: Secrets | null  = null; 
 
-export const getGroups = () => {
+export const getGroups = async() => {
 
-    const _secrets = secrets ?? JSON.parse(fs.readFileSync(path.join(__dirname, "..", "secrets.json")).toString()) as Secrets;
+    const _path = path.join(__dirname, "..", "secrets.json");
+    await fs.access(_path, fs.constants.F_OK).catch(err => {
+        throw new Error("No secrets.json found");
+    })
+
+    const _secrets = secrets ?? await JSON.parse((await fs.readFile(_path)).toString()) as Secrets;
     secrets = _secrets;
     const mode = getMode();
     let channel: number;
     let group: number;
-
+    /* c8 ignore next 6 */
     if(mode === "development") {
         channel = _secrets.devChannels.channel.id;
         group = _secrets.devChannels.group.id;
@@ -87,6 +107,7 @@ export const getGroups = () => {
     }
 }
 
+/* c8 ignore next 5 */
 export const getReverseToken = (token: string) => {
     if(token === process.env.BOT_TOKEN_DEV) return "DEV";
     if(token === process.env.BOT_TOKEN_BETA) return "BETA";

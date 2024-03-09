@@ -57,6 +57,7 @@ class DatabaseService implements Disposable {
             throw new DBError(err, "store");
         }
         finally {
+            /* c8 ignore next */
             con?.release();
         }
         
@@ -73,6 +74,7 @@ class DatabaseService implements Disposable {
             throw new DBError(err, "delete");
         }
         finally {
+            /* c8 ignore next */
             con?.release();
         }
     }
@@ -89,6 +91,7 @@ class DatabaseService implements Disposable {
             throw new DBError(err, "get");
         }
         finally {
+            /* c8 ignore next */
             con?.release();
         }
     }
@@ -110,6 +113,7 @@ class DatabaseService implements Disposable {
             throw new DBError(err, "get");
         }
         finally {
+            /* c8 ignore next */
             con?.release();
         }
 
@@ -123,6 +127,7 @@ class DatabaseService implements Disposable {
 
 function initializeDatabase() {
     if (!checkEnvVariables()) {
+        /* c8 ignore next 2 */
         throw new Error("Missing DB environment variables");
     }
 
@@ -131,7 +136,7 @@ function initializeDatabase() {
         user: process.env.DB_USER,
         password: process.env.DB_PASS,
         database: process.env.DB_NAME,
-        port: parseInt(process.env.DB_PORT ?? 3306, 10),
+        port: parseInt(process.env.DB_PORT ?? "3306", 10),
         connectionLimit: 50,
         bigIntAsNumber: true,
     });

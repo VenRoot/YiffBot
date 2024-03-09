@@ -10,14 +10,14 @@
 
 import { Context } from "grammy";
 import * as modmed from "./modmed";
-import { AlreadyExistsError, DBError, InvalidParamsError, MissingParamsError, NoCaptionError, NoMessageError, NoReplyToDocumentError, NotDirectMessageError, PermissionDeniedError } from "./exceptions";
+import { AlreadyExistsError, DBError, EmptyDirectoryError, EmptyFileError, InvalidMediaError, InvalidParamsError, MissingParamsError, NoCaptionError, NoMessageError, NoReplyToDocumentError, NoReplyToMessageError, NotDirectMessageError, OutOfRetiesError, PermissionDeniedError } from "./exceptions";
 import * as core from "../core";
 import * as media from "./media";
 import * as special from "../special";
 
-export function caption(ctx: Context) {
+export async function caption(ctx: Context) {
     try {
-        modmed.add(ctx);
+        await modmed.add(ctx);
     }
     catch(err) {
 
@@ -45,12 +45,14 @@ export function start(ctx: Context) {
     ctx.reply("You have to suck @Ventox2 dick now :3");
 }
 
-export function sendman(ctx: Context) {
+export async function sendman(ctx: Context) {
     try {
         if(!ctx.message) throw new NoMessageError();
-        const params = core.extractCommandArgument(ctx.message)?.trim() ?? "normal";
-        if(params !== "normal" && params !== "christmas" && params !== "newyear") throw new MissingParamsError(`Invalid params. Usage: /sendman <newyear | christmas | normal>? | Your input: ${params}`);
-        media.send(params);
+        if(!(await core.checkAdmin(ctx.message?.from.id?? -1))) throw new PermissionDeniedError();
+        const params = core.extractCommandArgument(ctx.message)?.trim() || "normal";
+        console.log([params]);
+        if(params !== "normal" && params !== "christmas" && params !== "newyear") throw new InvalidParamsError(`Invalid params. Usage: /sendman <newyear | christmas | normal>? | Your input: ${params}`);
+        await media.send(params);
     }
     catch(err) {
         if(err instanceof NoMessageError) {
@@ -59,8 +61,17 @@ export function sendman(ctx: Context) {
         else if(err instanceof PermissionDeniedError) {
             ctx.reply("You are not allowed to use this command");
         }
-        else if(err instanceof MissingParamsError) {
+        else if(err instanceof InvalidParamsError) {
             ctx.reply(err.message);
+        }
+        else if(err instanceof EmptyFileError) {
+            ctx.reply("Error: File is empty");
+        }
+        else if(err instanceof EmptyDirectoryError) {
+            ctx.reply("Error: Directory is empty");
+        }
+        else if(err instanceof OutOfRetiesError) {
+            ctx.reply(`Error: Out of retries: ${err.retries}`);
         }
         else {
             core.ReportError(ctx);
@@ -69,37 +80,13 @@ export function sendman(ctx: Context) {
     }
 }
 
-export function sendmannewyear(ctx: Context) {
-
-}
-
 export function ping(ctx: Context) {
-    ctx.reply("Pong");
+    ctx.reply("Pong!");
 }
 
 export function version(ctx: Context) {
     const version = process.env.VERSION ?? "no version set";
     ctx.reply(`Version: ${version}`);
-}
-
-/** @deprecated use setMethod */
-export function setChristmas(ctx: Context) {
-    throw new Error("Method not implemented.");
-}
-
-/** @deprecated use setMethod */
-export function setNewYear(ctx: Context) {
-    throw new Error("Method not implemented.");
-}
-
-/** @deprecated use setMethod */
-export function unsetChristmas(ctx: Context) {
-    throw new Error("Method not implemented.");
-}
-
-/** @deprecated use setMethod */
-export function unsetNewYear(ctx: Context) {
-    throw new Error("Method not implemented.");
 }
 
 export async function setMethod(ctx: Context) {
@@ -161,7 +148,7 @@ export async function status(ctx: Context) {
 
 }
 
-export function addAdmin(ctx: Context) {
+export async function addAdmin(ctx: Context) {
     try {
         if(!ctx.message) throw new NoMessageError();
         if(!core.isDirectMessage(ctx)) throw new NotDirectMessageError();
@@ -175,7 +162,7 @@ export function addAdmin(ctx: Context) {
         if(!id ||!name) throw new MissingParamsError("Usage: /adduser <ID> <name>");
 
         if(isNaN(parseInt(id))) throw new InvalidParamsError("ID must be a number");
-        core.addAdmin(parseInt(id), name);
+        await core.addAdmin(parseInt(id), name);
     } catch(err) {
         if(err instanceof NoMessageError) {
             ctx.reply("No message object recieved-");
@@ -201,12 +188,11 @@ export function addAdmin(ctx: Context) {
         else {
             core.ReportError(ctx);
             console.error(err);
-            ctx.reply("Unknown error, informing the developer");
         }
     }
 }
 
-export function removeAdmin(ctx: Context) {
+export async function removeAdmin(ctx: Context) {
     try {
         if(!ctx.message) throw new NoMessageError();
         if(!core.isDirectMessage(ctx)) throw new NotDirectMessageError();
@@ -219,7 +205,7 @@ export function removeAdmin(ctx: Context) {
         if(!id) throw new MissingParamsError("Usage: /removeuser <ID>");
 
         if(isNaN(parseInt(id))) throw new InvalidParamsError("ID must be a number");
-        core.removeAdmin(parseInt(id));
+        await core.removeAdmin(parseInt(id));
     } catch(err) {
         if(err instanceof NoMessageError) {
             ctx.reply("No message object recieved-");
@@ -238,6 +224,69 @@ export function removeAdmin(ctx: Context) {
         }
         else if(err instanceof DBError) {
             ctx.reply("Error while removing user from the database: " + JSON.stringify(err));
+        }
+        else {
+            core.ReportError(ctx);
+            console.error(err);
+        }
+    }
+}
+
+export async function handleMedia(e: Context, type: "photo" | "animation" | "video") {
+    try {
+        if(!type) throw new MissingParamsError("No media type given");
+        if(!e.message) throw new NoMessageError();
+        if(!core.isDirectMessage(e)) throw new NotDirectMessageError();
+        if(!await core.checkAdmin(e.message?.from.id ?? -1)) throw new PermissionDeniedError();
+        console.warn(type);
+        await media.uploadMedia(e.message, type);
+    }
+    catch(err) {
+        if(err instanceof NoMessageError) {
+            e.reply("No message object recieved-");
+        }
+        else if (err instanceof NotDirectMessageError) {
+            e.reply("This command can only be used in direct messages");
+        }
+        else if (err instanceof PermissionDeniedError) {
+            e.reply("You are not allowed to use this command");
+        }
+        else if(err instanceof EmptyFileError) {
+            e.reply("File is empty! Try again");
+        }
+    }
+}
+
+export async function addCaptionToMedia(ctx: Context) {
+    try {
+        if(!ctx.message) throw new NoMessageError();
+        if(!core.isDirectMessage(ctx)) throw new NotDirectMessageError();
+        if(!await core.checkAdmin(ctx.message?.from.id ?? -1)) throw new PermissionDeniedError();
+        if(!ctx.message.reply_to_message) throw new NoReplyToMessageError();
+        const fileId = media.getAutomaticMediaObject(ctx.message.reply_to_message);
+        const fileIdWithExt = fileId.media.file_id +"."+fileId.type;
+        const Caption = core.extractCommandArgument(ctx.message)?.trim();
+        if(!Caption) throw new MissingParamsError("Usage: /addmodmed <caption>");
+        core.saveModMed(fileIdWithExt, Caption);
+        ctx.reply(`Der Media ${fileId.media.file_id} wurde ${Caption} hinzugefügt`);
+    } catch(err) {
+        if(err instanceof NoMessageError) {
+            ctx.reply("No message object recieved-");
+        }
+        else if(err instanceof NotDirectMessageError) {
+            ctx.reply("This command can only be used in direct messages");
+        }
+        else if(err instanceof PermissionDeniedError) {
+            ctx.reply("You are not allowed to use this command");
+        }
+        else if(err instanceof InvalidMediaError) {
+            ctx.reply("Invalid media, only photos, videos and gifs are supported");
+        }
+        else if(err instanceof MissingParamsError) {
+            ctx.reply(err.message);
+        }
+        else if(err instanceof DBError) {
+            ctx.reply("Error while adding media to database: " + JSON.stringify(err));
         }
         else {
             core.ReportError(ctx);

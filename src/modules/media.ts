@@ -1,73 +1,64 @@
-import { Context, InputFile } from "grammy";
-import { checkAdmin, getGroups, isDirectMessage, notifyAdmins } from "../core";
-import fs from "fs";
+import fs from "fs/promises";
+import { InputFile } from "grammy";
 import path from "path";
 import { bot, getToken } from "../bot";
-import * as files from "./file"
+import { getGroups, notifyAdmins } from "../core";
 import type { iModMed, media } from '../interface';
-import { isChristmas, isNewYear, special } from '../special';
+import { special } from '../special';
+import * as files from "./file";
+import * as downloadFile from "./file/downloadFile";
 
 //@ts-ignore
-import {VenID} from "../secrets.json";
-import { databaseService } from "../mariadb";
+import { VenID } from "../../secrets.json";
 import { Animation, Message, PhotoSize, Update, Video } from "grammy/types";
-import { EmptyDirectoryError, EmptyFileError, GetFileError, OutOfRetiesError, PermissionDeniedError } from "./exceptions";
-
-async function handle(e: Context, type: "photo" | "animation" | "video") {
-    if(!isDirectMessage(e)) return;
-
-    if(!await checkAdmin(e.message?.from.id ?? -1)) return e.reply("Permission denied");
-    if(!e.message) throw new Error();
-
-    uploadMedia(e.message, type);
-}
+import { databaseService } from "../mariadb";
+import { EmptyDirectoryError, EmptyFileError, GetFileError, InvalidMediaError, OutOfRetiesError, NoMediaError } from "./exceptions";
 
 /**
  * 
  * @param directory 
  * @param retries 
  * @returns 
- * @throws {EmptyFileError | EmptyDirectoryError | OutOfRetiesError}
+ * @throws {EmptyFileError | EmptyDirectoryError | OutOfRetiesError | DBError}
  */
 export const send = async (directory: directories, retries: number = 0): Promise<void> => {
 
     const basePath = path.join(__dirname, "..", "data", "pics", directory);
-    let mediaFileName = await getRandomMedia(directory);
-    if(mediaFileName === null) throw new EmptyDirectoryError();
-    const groups = getGroups();
-
-
-
-    const mediaPath = path.join(basePath, mediaFileName);
+    let fileIdWithExt = await getRandomMedia(directory);
+    if(fileIdWithExt === null) throw new EmptyDirectoryError();
+    const groups = await getGroups();
+    const mediaPath = path.join(basePath, fileIdWithExt);
 
     try {
         await files.checkIfValid(mediaPath);
     }
     catch(err) {
         if(retries < 5) return send(directory, retries+1);
-        else throw new OutOfRetiesError("Too many retries trying to send media");
+        else throw new OutOfRetiesError("Too many retries trying to send media", retries);
     }
-    const modmed = await getModMed(mediaFileName);
-    const extension = path.extname(mediaFileName).toLocaleLowerCase();
-
+    const modmed = await getModMed(fileIdWithExt);
+    const extension = path.extname(fileIdWithExt).toLocaleLowerCase();
     switch(extension) {
         case ".jpg": await bot.api.sendPhoto(groups.channel, new InputFile(mediaPath), { caption: modmed }); break;
         case ".gif": await bot.api.sendAnimation(groups.channel, new InputFile(mediaPath), { caption: modmed }); break;
         case ".mp4": await bot.api.sendVideo(groups.channel, new InputFile(mediaPath), { caption: modmed }); break;
         default: 
             console.log(`Nicht unterstütztes Medienformat: ${extension}`); 
+            fs.unlink(mediaPath);
             return; // Beende frühzeitig, wenn Format nicht unterstützt wird
     }
-    if(modmed) excludeFromModMed(mediaFileName);
-    fs.unlinkSync(mediaPath);
+    if(modmed) excludeFromModMed(fileIdWithExt);
+    fs.unlink(mediaPath);
 };
 
+/** @throws {DBError} */
 const getRandomMedia = async (dir: directories) => {
     const _path = path.join(__dirname, "..", "data", "pics", dir);
 
 
-    fs.mkdirSync(_path, {recursive: true});
-    const files = fs.readdirSync(_path);
+    await fs.mkdir(_path, {recursive: true});
+    const files = await fs.readdir(_path);
+    // console.warn(files);
 
     let admins = await databaseService.getAllData() || [{ name: "Ven", userid: VenID}];
 
@@ -84,62 +75,63 @@ const getRandomMedia = async (dir: directories) => {
 
 /**
  * 
- * @throws {PermissionDeniedError | GetFileError}
+ * @throws {PermissionDeniedError | GetFileError | EmptyFileError | InvalidStatusCode | HttpError}
  */
-const uploadMedia = async (message: (Message & Update.NonChannel), mediaType: MediaType) => {
+export const uploadMedia = async (message: (Message & Update.NonChannel), mediaType: MediaType) => {
+    console.warn(message, mediaType); //Here, both parameters are undefined
     let directory = "normal";
     if (special.christmas) directory = "christmas";
     else if (special.newyear) directory = "newyear";
 
-    if (!await checkAdmin(message?.from.id ?? -1)) throw new PermissionDeniedError();
 
-    let mediaObj: PhotoSize | Animation | Video | null = getMediaObject(mediaType, message);
-
-    if (!mediaObj) {
-        throw new Error(`No ${mediaType} given`);
-    }
-
+    let mediaObj: PhotoSize | Animation | Video | null = getMediaObject(message, mediaType);
 
     const PID = mediaObj.file_id;
     const file = await bot.api.getFile(PID).catch(err => {
         throw new GetFileError(`Failed to get ${mediaType}: ${err}`);
     });
-
-    if (!file) return; // Frühes Beenden, wenn beim Abrufen der Datei ein Fehler aufgetreten ist
-
     const fileExtension = mediaType === "photo" ? "jpg" : (mediaType === "animation" ? "gif" : "mp4");
     const link = `https://api.telegram.org/file/bot${getToken()}/${file.file_path}`;
     const filePath = path.join(__dirname, "..", "data", "pics", directory, `${PID}.${fileExtension}`);
 
     //TODO Extract from function
-    files.downloadFile(link, filePath).then(() => afterSubmission(message, filePath));
+    await downloadFile.downloadFile(link, filePath);
+    await afterSubmission(filePath);
+    return null;
 };
+
+export type mediaCounts = {
+    jpg: number;
+    gif: number;
+    mp4: number;
+};
+
 
 export const getMediaCount = async () =>
 {
     const locs: directories[] =  ["normal", "christmas", "newyear"];
-    type mediaCounts = {
-        jpg: number;
-        gif: number;
-        mp4: number;
-    }
+    
     const mediaCount = new Map<directories, mediaCounts>();
-    locs.forEach(loc => {
-        fs.mkdirSync(path.join(__dirname, "..", "data", "pics", loc), {recursive: true});
-        let Anzahl = fs.readdirSync(path.join(__dirname, "..", "data", "pics", loc));
+    const promises = locs.map(async item => {
+        let [_, Anzahl] = await Promise.all([fs.mkdir(path.join(__dirname, "..", "data", "pics", item), {recursive: true}), await fs.readdir(path.join(__dirname, "..", "data", "pics", item))]);
 
-        let med:media = {jpg: [], gif: [], mp4: []};
+        let med:mediaCounts = {jpg: 0, gif: 0, mp4: 0};
         
-        med.gif = Anzahl.filter(x => path.extname(x) == ".gif");
-        med.jpg = Anzahl.filter(x => path.extname(x) == ".jpg");
-        med.mp4 = Anzahl.filter(x => path.extname(x) == ".mp4");
-        mediaCount.set(loc, {jpg: med.jpg.length, gif: med.gif.length, mp4: med.mp4.length});
+        med.gif = Anzahl.filter(x => path.extname(x) == ".gif").length;
+        med.jpg = Anzahl.filter(x => path.extname(x) == ".jpg").length;
+        med.mp4 = Anzahl.filter(x => path.extname(x) == ".mp4").length;
+        mediaCount.set(item, {jpg: med.jpg, gif: med.gif, mp4: med.mp4});
+
+        return;
     });
 
+    await Promise.all(promises);
     return mediaCount;
     
 } 
 
+
+/** @throws {InvalidMediaError} */
 export function getAutomaticMediaObject(message: Message) {
     let mediaObj: PhotoSize | Animation | Video | null = null;
     if (message?.photo) {
@@ -149,13 +141,15 @@ export function getAutomaticMediaObject(message: Message) {
     } else if (message?.video) {
         mediaObj = message.video;
     } else {
-        throw new Error(`No media given`);
+        throw new InvalidMediaError();
     }
-    return mediaObj;
+    return {media: mediaObj, type: path.extname(mediaObj.file_id).toLocaleLowerCase()};
 }
 
-export function getMediaObject(mediaType: string, message: Message) {
-    let mediaObj: PhotoSize | Animation | Video | null = null;
+export function getMediaObject(message: Message, mediaType: string) {
+    let mediaObj: PhotoSize | Animation | Video;
+
+    console.log(mediaType)
 
     if (mediaType === "photo" && message?.photo) {
         mediaObj = message.photo[message?.photo?.length - 1];
@@ -164,46 +158,41 @@ export function getMediaObject(mediaType: string, message: Message) {
     } else if (mediaType === "video" && message?.video) {
         mediaObj = message.video;
     } else {
-        throw new Error(`No ${mediaType} given`);
+        throw new NoMediaError(mediaType);
     }
     return mediaObj;
 }
 
-function afterSubmission(ctx: Context, filePath: string) {
-    files.checkIfValid(filePath).catch(err => {
-        if(err instanceof EmptyFileError)
-        console.error(err);
-        ctx.reply("File is empty... deleting file " + err, {reply_to_message_id: ctx.message?.message_id});
-        fs.unlink(filePath, (err) => {
-            if(err) { 
-                console.error(err);
-                ctx.reply("Failed to delete file: " + err, {reply_to_message_id: ctx.message?.message_id});
-            }
-        });
-        throw new EmptyFileError();
-    });
+/** @throws {EmptyFileError} */
+export async function afterSubmission(filePath: string) {
+    try {
+        await files.checkIfValid(filePath);
+    }
+    catch(err) {
+        await fs.unlink(filePath);
+        throw err;
+    }
 }
 
 const excludeFromModMed = async (Media: string) =>
 {
-    let x = fs.readFileSync(path.join(__dirname, "..", "data", "modmed.json"));
+    let x = await fs.readFile(path.join(__dirname, "..", "data", "modmed.json"));
     let modmed = JSON.parse(x.toString()) as iModMed[];
     //if the media is not in the modmed list, return
     if(!modmed.some(x => x.file === Media)) return;
     modmed = modmed.filter(x => x.file != Media);
-    fs.writeFileSync(path.join(__dirname, "..", "data", "modmed.json"), JSON.stringify(modmed));
+    await fs.writeFile(path.join(__dirname, "..", "data", "modmed.json"), JSON.stringify(modmed));
 }
 
-const getModMed = async (Media: string) =>
+const getModMed = async (fileId: string) =>
 {
-    let x = fs.readFileSync(path.join(__dirname, "..", "data", "modmed.json"));
-    console.log(x);
+    let x = await fs.readFile(path.join(__dirname, "..", "data", "modmed.json"));
     let modmed = JSON.parse(x.toString()) as iModMed[];
-    return modmed.find(x => x.file == Media)?.caption ?? undefined;
+    return modmed.find(x => x.file == fileId)?.caption ?? undefined;
 }
 
 
 
-type directories = "christmas" | "newyear" | "normal";
+export type directories = "christmas" | "newyear" | "normal";
 type MediaType  = "photo" | "animation" | "video";
 

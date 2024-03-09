@@ -1,0 +1,1 @@
+process.env.BOT_URL = "http://localhost:9001";

@@ -1,0 +1,77 @@
+import TelegramServer from "telegram-test-api";
+import fs from "fs/promises";
+import path from "path";
+import * as core from "../../core";
+import fsSync from "fs";
+import * as envs from "../../modules/envs";
+import * as media from "../../modules/media";
+
+let server = new TelegramServer({
+    host: "localhost",
+    port: 9001,
+    storage: "RAM",
+    protocol: "https",
+    storeTimeout: 60
+});
+
+const mediaFiles = [
+    "test.jpg",
+    "test.gif",
+    "test.mp4"
+]
+
+
+describe('send', () => { 
+    describe('successful tests', () => {
+       let readdirSpy: jest.SpyInstance;
+       let mkdirSpy: jest.SpyInstance;
+       let pathJoinSpy: jest.SpyInstance;
+       let getGroupsSpy: jest.SpyInstance;
+       let fsStatSpy: jest.SpyInstance;
+       let readFileSpy: jest.SpyInstance; // Modmed {x: {file: string}[]}
+       let writeFileSpy: jest.SpyInstance; // ModmedWrite
+       let fsUnlinkSpy: jest.SpyInstance;
+       let checkEnvVariableSpy: jest.SpyInstance;
+       beforeAll(() => {
+        process.env.DB_HOST = "localhost";
+        process.env.DB_USER = "root";
+        process.env.DB_PASS = "<PASSWORD>";
+        process.env.DB_NAME = "test";
+        process.env.DB_PORT = "3306";
+            checkEnvVariableSpy = jest.spyOn(envs, "checkEnvVariables").mockImplementation(() => true);
+            fsUnlinkSpy = jest.spyOn(fsSync, "unlink").mockImplementation(() => Promise.resolve());
+            readFileSpy = jest.spyOn(fs, "readFile").mockResolvedValue(JSON.stringify([]));
+            writeFileSpy = jest.spyOn(fs, "writeFile").mockResolvedValue(undefined);
+            mkdirSpy = jest.spyOn(fs, "mkdir").mockResolvedValue(undefined);
+            fsStatSpy = jest.spyOn(fs, "stat").mockResolvedValue({isFile: () => true, size: BigInt(1)} as any);
+            getGroupsSpy = jest.spyOn(core, "getGroups").mockResolvedValue({channel: 0, group: 0});
+            pathJoinSpy = jest.spyOn(path, "join").mockReturnValue("test");
+           readdirSpy = jest.spyOn(fs, "readdir").mockResolvedValue(mediaFiles as string[] as any);
+       });
+
+       afterAll(() => {
+            checkEnvVariableSpy.mockRestore();
+            readdirSpy.mockRestore();
+            mkdirSpy.mockRestore();
+            pathJoinSpy.mockRestore();
+            getGroupsSpy.mockRestore();
+            fsStatSpy.mockRestore();
+            readFileSpy.mockRestore();
+            writeFileSpy.mockRestore();
+            fsUnlinkSpy.mockRestore();
+       });
+
+       it("Should send a file", () => {
+        media.send("normal").then((msg) => {
+            if(!msg) throw new Error("No message");
+            const updates = server.getUpdates("INVALID");
+            const message = updates.find((update) => update.message?.message_id === msg.message_id);
+            expect(message).not.toBeUndefined();
+        })
+        
+       });
+
+
+
+    });
+})
