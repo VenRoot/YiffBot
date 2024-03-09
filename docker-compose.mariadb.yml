@@ -11,10 +11,10 @@ services:
       - mariadbdata:/var/lib/mysql
     environment:
       TZ: Europe/Berlin
-      MYSQL_ROOT_PASSWORD: yiffslut
-      MYSQL_DATABASE: yiffslut
-      MYSQL_USER: yiffslut
-      MYSQL_PASSWORD: yiffslut
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DB}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
     
 
 volumes:
