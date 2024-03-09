@@ -12,9 +12,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@grammyjs/types": "^3.5.2",
     "date-fns": "^2.28.0",
     "dotenv": "^16.0.1",
-    "grammy": "^1.9.0",
+    "grammy": "^1.21.1",
     "jest": "^29.7.0",
     "mariadb": "^3.2.0",
     "mongo": "^0.1.0",

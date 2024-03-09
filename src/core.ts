@@ -79,7 +79,7 @@ let secrets: Secrets | null  = null;
 export const getGroups = async() => {
 
     const _path = path.join(__dirname, "..", "secrets.json");
-    await fs.access(_path, fs.constants.F_OK).catch(err => {
+    await fs.access(_path, _fs.constants.F_OK).catch(err => {
         throw new Error("No secrets.json found");
     })
 

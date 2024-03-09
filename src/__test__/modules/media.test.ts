@@ -19,9 +19,6 @@ import { EmptyDirectoryError, EmptyFileError, GetFileError, OutOfRetiesError } f
 import type { File, Message, Update } from "grammy/types";
 import * as downloadFile from "../../modules/file/downloadFile";
 import * as checkIfValid from "../../modules/file/checkIfValid";
-import * as writeFile from "../../modules/file/writeFile";
-import exp from "constants";
-import { before } from "node:test";
 jest.spyOn(bot, "getToken").mockImplementation(() => "INVALID");
 
 const mediaFiles = [
