@@ -7,9 +7,10 @@ import { bot, getMode } from "./bot";
 import type Secrets from "./secrets.interface";
 import { AlreadyExistsError, DBError, InvalidParamsError, MissingParamsError, NoMessageError, NotDirectMessageError, PermissionDeniedError } from "./modules/exceptions";
 import  type { Message, Update } from "grammy/types";
-import { VenID } from "../secrets.json";
 import { iModMed } from "./interface";
 
+
+const getVenID = () => Number(process.env.VENID ?? 0);
 
 export const checkAdmin = async (userid: number) => {
     if(!userid) return false;
@@ -27,7 +28,7 @@ export async function notifyAdmins(admins: { userid: number; name: string }[], m
         await bot.api.sendMessage(admin.userid, message);
         /* c8 ignore next 3 */
       } catch (err) {
-        await bot.api.sendMessage(VenID, `Konnte Nachricht an Admin ${admin.name} nicht senden: RawError: ${JSON.stringify(err)}`);
+        await bot.api.sendMessage(getVenID(), `Konnte Nachricht an Admin ${admin.name} nicht senden: RawError: ${JSON.stringify(err)}`);
       }
     }
   }
@@ -60,7 +61,7 @@ export function extractCommandArgument(msg: (Message & Update.NonChannel)) {
     return msg.text?.split(" ").slice(1).join(" ");
 }
 
-export const checkVen = (e: Context) => e.chat?.id == VenID;
+export const checkVen = (e: Context) => e.chat?.id == getVenID();
 
 /** @throws {AlreadyExistsError | DBError} */
 export const addAdmin = async (userid: number, name: string) => {
