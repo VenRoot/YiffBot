@@ -5,12 +5,10 @@ import path from "path";
 import { databaseService } from "./mariadb";
 import { bot, getMode } from "./bot";
 import type Secrets from "./secrets.interface";
-import { AlreadyExistsError, DBError, InvalidParamsError, MissingParamsError, NoMessageError, NotDirectMessageError, PermissionDeniedError } from "./modules/exceptions";
+import { AlreadyExistsError } from "./modules/exceptions";
 import  type { Message, Update } from "grammy/types";
 import { iModMed } from "./interface";
-
-
-const getVenID = () => Number(process.env.VENID ?? 0);
+import config from "./modules/env";
 
 export const checkAdmin = async (userid: number) => {
     if(!userid) return false;
@@ -28,7 +26,7 @@ export async function notifyAdmins(admins: { userid: number; name: string }[], m
         await bot.api.sendMessage(admin.userid, message);
         /* c8 ignore next 3 */
       } catch (err) {
-        await bot.api.sendMessage(getVenID(), `Konnte Nachricht an Admin ${admin.name} nicht senden: RawError: ${JSON.stringify(err)}`);
+        await bot.api.sendMessage(config.VenID, `Konnte Nachricht an Admin ${admin.name} nicht senden: RawError: ${JSON.stringify(err)}`);
       }
     }
   }
@@ -61,7 +59,7 @@ export function extractCommandArgument(msg: (Message & Update.NonChannel)) {
     return msg.text?.split(" ").slice(1).join(" ");
 }
 
-export const checkVen = (e: Context) => e.chat?.id == getVenID();
+export const checkVen = (e: Context) => e.chat?.id == config.VenID;
 
 /** @throws {AlreadyExistsError | DBError} */
 export const addAdmin = async (userid: number, name: string) => {
@@ -79,27 +77,21 @@ let secrets: Secrets | null  = null;
 
 export const getGroups = async() => {
 
-    const _path = path.join(__dirname, "..", "secrets.json");
-    await fs.access(_path, _fs.constants.F_OK).catch(err => {
-        throw new Error("No secrets.json found");
-    })
 
-    const _secrets = secrets ?? await JSON.parse((await fs.readFile(_path)).toString()) as Secrets;
-    secrets = _secrets;
     const mode = getMode();
     let channel: number;
     let group: number;
     /* c8 ignore next 6 */
     if(mode === "development") {
-        channel = _secrets.devChannels.channel.id;
-        group = _secrets.devChannels.group.id;
+        channel = config.devChannels.channel.id;
+        group = config.devChannels.group.id;
     } else if(mode === "beta") {
-        channel = _secrets.betaChannels.channel.id;
-        group = _secrets.betaChannels.group.id;
+        channel = config.betaChannels.channel.id;
+        group = config.betaChannels.group.id;
     } else {
         // Return production values if not dev or beta
-        channel = _secrets.channels.channel.id;
-        group = _secrets.channels.group.id;
+        channel = config.channels.channel.id;
+        group = config.channels.group.id;
     }
 
     return {

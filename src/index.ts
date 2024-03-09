@@ -3,8 +3,7 @@ dotenv.config();
 
 import { Context } from "grammy";
 import { ReportError, getReverseToken } from './core';
-//@ts-ignore
-import {VenID} from "../secrets.json";
+import config from "./modules/env";
 import s from "node-schedule";
 import { isChristmas, isNewYear, special } from './special';
 if(process.env.BOT_TOKEN === undefined) throw "No Bot_Token";
@@ -36,7 +35,7 @@ bot.on(":video", (e) => middleware.handleMedia(e, "video"));
 
 bot.start({drop_pending_updates: process.env.DROP_PENDING_UPDATES === "true", onStart: () => {
     console.log("Started bot in "+getReverseToken(bot.token) + " mode");
-    bot.api.sendMessage(VenID, "Bot started");
+    bot.api.sendMessage(config.VenID, "Bot started");
 }});
 
 

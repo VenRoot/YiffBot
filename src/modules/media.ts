@@ -8,8 +8,7 @@ import { special } from '../special';
 import * as files from "./file";
 import * as downloadFile from "./file/downloadFile";
 
-//@ts-ignore
-import { VenID } from "../../secrets.json";
+import config from "./env";
 import type { Animation, Message, PhotoSize, Update, Video } from "grammy/types";
 import { databaseService } from "../mariadb";
 import { EmptyDirectoryError, EmptyFileError, GetFileError, InvalidMediaError, OutOfRetiesError, NoMediaError } from "./exceptions";
@@ -60,7 +59,7 @@ const getRandomMedia = async (dir: directories) => {
     const files = await fs.readdir(_path);
     // console.warn(files);
 
-    let admins = await databaseService.getAllData() || [{ name: "Ven", userid: VenID}];
+    let admins = await databaseService.getAllData() || [{ name: "Ven", userid: config.VenID}];
 
     if(files.length < 10) {
         const warningMessage = files.length === 0 ? `Ordner ist leer` : `Achtung! Nur noch ${files.length} Medien! Bitte nachfüllen`;

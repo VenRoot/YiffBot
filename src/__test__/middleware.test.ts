@@ -53,34 +53,6 @@ jest.mock('fs/promises', () => ({
 
 
 const fsReadFileMock = (_path: PathLike | FileHandle) => {
-  // console.warn(_path);
-  if(_path.toString().endsWith("secrets.json")) return Promise.resolve(Buffer.from(JSON.stringify({
-    devChannels: {
-      group: {
-        id: -1
-      },
-      channel: {
-        id: -1
-      }
-    },
-    betaChannels: {
-      group: {
-        id: -1
-      },
-      channel: {
-        id: -1
-      }
-    },
-    channels: {
-      group: {
-        id: -1
-      },
-      channel: {
-        id: -1
-      }
-    }
-  })));
-
   if(_path.toString().endsWith("modmed.json")) return Promise.resolve(Buffer.from(JSON.stringify([{
     file: "test.jpg",
     caption: "TEST"
@@ -90,32 +62,6 @@ const fsReadFileMock = (_path: PathLike | FileHandle) => {
 }
 const fsReadFileMockEmptyFile = (_path: PathLike | FileHandle) => {
   // console.warn(_path);
-  if(_path.toString().endsWith("secrets.json")) return Promise.resolve(Buffer.from(JSON.stringify({
-    devChannels: {
-      group: {
-        id: -1
-      },
-      channel: {
-        id: -1
-      }
-    },
-    betaChannels: {
-      group: {
-        id: -1
-      },
-      channel: {
-        id: -1
-      }
-    },
-    channels: {
-      group: {
-        id: -1
-      },
-      channel: {
-        id: -1
-      }
-    }
-  })));
 
   if(_path.toString().endsWith("modmed.json")) return Promise.resolve(Buffer.from(JSON.stringify([{
     file: "test.jpg",
