@@ -6,7 +6,7 @@ import { databaseService } from "./mariadb";
 import { bot, getMode } from "./bot";
 import type Secrets from "./secrets.interface";
 import { AlreadyExistsError, DBError, InvalidParamsError, MissingParamsError, NoMessageError, NotDirectMessageError, PermissionDeniedError } from "./modules/exceptions";
-import { Message, Update } from "grammy/types";
+import  type { Message, Update } from "grammy/types";
 import { VenID } from "../secrets.json";
 import { iModMed } from "./interface";
 

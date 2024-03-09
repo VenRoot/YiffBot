@@ -10,7 +10,7 @@ import * as downloadFile from "./file/downloadFile";
 
 //@ts-ignore
 import { VenID } from "../../secrets.json";
-import { Animation, Message, PhotoSize, Update, Video } from "grammy/types";
+import type { Animation, Message, PhotoSize, Update, Video } from "grammy/types";
 import { databaseService } from "../mariadb";
 import { EmptyDirectoryError, EmptyFileError, GetFileError, InvalidMediaError, OutOfRetiesError, NoMediaError } from "./exceptions";
 

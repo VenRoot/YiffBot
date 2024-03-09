@@ -1,5 +1,5 @@
 import { Context } from "grammy";
-import { Animation, Chat, Document, PhotoSize, Video } from "grammy/types";
+import type { Animation, Chat, Document, PhotoSize, Video } from "grammy/types";
 
 export function createPrivateCTX(
   msgText?: string,

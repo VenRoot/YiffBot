@@ -16,7 +16,7 @@ import * as bot from "../../bot";
 
 import { queryMock, createPool, pingMock, getConnectionMock } from "../../__mocks__/mariadb";
 import { EmptyDirectoryError, EmptyFileError, GetFileError, OutOfRetiesError } from "../../modules/exceptions";
-import { File, Message, Update } from "grammy/types";
+import type { File, Message, Update } from "grammy/types";
 import * as downloadFile from "../../modules/file/downloadFile";
 import * as checkIfValid from "../../modules/file/checkIfValid";
 import * as writeFile from "../../modules/file/writeFile";
