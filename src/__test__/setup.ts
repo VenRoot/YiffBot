@@ -29,3 +29,6 @@ const envs = [
 for (const env of envs) {
     process.env[env] = "INVALID";
 }
+
+process.env["VEN_ID"] = "621";
+process.env["ADMINS"] = "2,3";

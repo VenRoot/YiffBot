@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import { InputFile } from "grammy";
 import path from "path";
 import { bot, getToken } from "../bot";
-import { getGroups, notifyAdmins } from "../core";
+import { getDataPath, getGroups, notifyAdmins } from "../core";
 import type { iModMed, media } from '../interface';
 import { special } from '../special';
 import * as files from "./file";
@@ -22,7 +22,7 @@ import { EmptyDirectoryError, EmptyFileError, GetFileError, InvalidMediaError, O
  */
 export const send = async (directory: directories, retries: number = 0): Promise<void> => {
 
-    const basePath = path.join(__dirname, "..", "data", "pics", directory);
+    const basePath = path.join(getDataPath(), "pics", directory);
     let fileIdWithExt = await getRandomMedia(directory);
     if(fileIdWithExt === null) throw new EmptyDirectoryError();
     const groups = await getGroups();
@@ -52,7 +52,7 @@ export const send = async (directory: directories, retries: number = 0): Promise
 
 /** @throws {DBError} */
 const getRandomMedia = async (dir: directories) => {
-    const _path = path.join(__dirname, "..", "data", "pics", dir);
+    const _path = path.join(getDataPath(), "pics", dir);
 
 
     await fs.mkdir(_path, {recursive: true});
@@ -91,7 +91,7 @@ export const uploadMedia = async (message: (Message & Update.NonChannel), mediaT
     });
     const fileExtension = mediaType === "photo" ? "jpg" : (mediaType === "animation" ? "gif" : "mp4");
     const link = `https://api.telegram.org/file/bot${getToken()}/${file.file_path}`;
-    const filePath = path.join(__dirname, "..", "data", "pics", directory, `${PID}.${fileExtension}`);
+    const filePath = path.join(getDataPath(), "pics", directory, `${PID}.${fileExtension}`);
 
     //TODO Extract from function
     await downloadFile.downloadFile(link, filePath);
@@ -109,10 +109,12 @@ export type mediaCounts = {
 export const getMediaCount = async () =>
 {
     const locs: directories[] =  ["normal", "christmas", "newyear"];
+    const dataPath = getDataPath();
     
     const mediaCount = new Map<directories, mediaCounts>();
     const promises = locs.map(async item => {
-        let [_, Anzahl] = await Promise.all([fs.mkdir(path.join(__dirname, "..", "data", "pics", item), {recursive: true}), await fs.readdir(path.join(__dirname, "..", "data", "pics", item))]);
+        await fs.mkdir(path.join(dataPath, "pics", item), {recursive: true})
+        let Anzahl = await fs.readdir(path.join(dataPath, "pics", item));
 
         let med:mediaCounts = {jpg: 0, gif: 0, mp4: 0};
         
@@ -175,17 +177,19 @@ export async function afterSubmission(filePath: string) {
 
 const excludeFromModMed = async (Media: string) =>
 {
-    let x = await fs.readFile(path.join(__dirname, "..", "data", "modmed.json"));
+    const dataPath = getDataPath();
+    let x = await fs.readFile(path.join(dataPath, "modmed.json"));
     let modmed = JSON.parse(x.toString()) as iModMed[];
     //if the media is not in the modmed list, return
     if(!modmed.some(x => x.file === Media)) return;
     modmed = modmed.filter(x => x.file != Media);
-    await fs.writeFile(path.join(__dirname, "..", "data", "modmed.json"), JSON.stringify(modmed));
+    await fs.writeFile(path.join(dataPath, "modmed.json"), JSON.stringify(modmed));
 }
 
 const getModMed = async (fileId: string) =>
 {
-    let x = await fs.readFile(path.join(__dirname, "..", "data", "modmed.json"));
+    const dataPath = getDataPath();
+    let x = await fs.readFile(path.join(dataPath, "modmed.json"));
     let modmed = JSON.parse(x.toString()) as iModMed[];
     return modmed.find(x => x.file == fileId)?.caption ?? undefined;
 }

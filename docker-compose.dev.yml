@@ -9,10 +9,12 @@ services:
       - yiffslutdata_dev:/app/data
     environment:
       TZ: Europe/Berlin
+      DATA_DIR: /app/data
     env_file:
-      - .env
+      - .env.docker
 
   mariadb:
+    container_name: yiffbot_dev_mariadb
     image: mariadb:latest
     restart: always
     volumes:

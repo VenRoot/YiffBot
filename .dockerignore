@@ -5,3 +5,5 @@ bin/
 data/
 .env
 prod.env
+docker*
+coverage/

@@ -3,7 +3,7 @@ import path from "path";
 
 import { Context } from "grammy";
 
-import { checkAdmin, extractCommandArgument, isDirectMessage } from "../core";
+import { checkAdmin, extractCommandArgument, getDataPath, isDirectMessage } from "../core";
 import { NoCaptionError, NoReplyToDocumentError, NotDirectMessageError, PermissionDeniedError } from "./exceptions";
 import { getAutomaticMediaObject, getMediaObject } from "./media";
 import { iModMed } from "../interface";
@@ -20,7 +20,7 @@ export async function add(ctx: Context) {
 }
 
 async function save(Media: string, Caption: string) {
-    const filePath = path.join(__dirname, "..", "data", "modmed.json");
+    const filePath = path.join(getDataPath(), "modmed.json");
     const x = await fs.readFile(filePath);
     let modmed = JSON.parse(x.toString()) as iModMed[];
     modmed.push({file: Media, caption: Caption});

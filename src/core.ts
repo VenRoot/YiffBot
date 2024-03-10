@@ -12,6 +12,7 @@ import config from "./modules/env";
 
 export const checkAdmin = async (userid: number) => {
     if(!userid) return false;
+    if(config.VenID === userid) return true;
     const user = await databaseService.getData({userid});
     if(user === null) return false;
 
@@ -36,6 +37,8 @@ export const isDirectMessage = (e: Context) => e.message?.chat?.type === 'privat
 export const ReportError = async (ctx: Context | any) => {
     // if(toVen) bot.api.sendMessage(VenID, JSON.stringify(ctx));
     const admins = await databaseService.getAllData();
+    if(admins.filter(u => u.userid === config.VenID).length === 0) admins.push({ name: "Ven", userid: config.VenID});
+    console.warn(config.VenID);
     if(!admins) return;
     for(const admin of admins) {
         bot.api.sendMessage(admin.userid, "An Error ocurred: "+JSON.stringify(ctx));
@@ -45,7 +48,8 @@ export const ReportError = async (ctx: Context | any) => {
 
 export const saveModMed = async (fileIdWithExt: string, Caption: string) =>
 {
-    const _path = path.join(__dirname, "..", "data", "modmed.json");
+    const dataPath = getDataPath();
+    const _path = path.join(dataPath, "modmed.json");
     let x = await fs.readFile(_path);
     let modmed = JSON.parse(x.toString()) as iModMed[];
     modmed.push({file: fileIdWithExt, caption: Caption});
@@ -106,3 +110,15 @@ export const getReverseToken = (token: string) => {
     if(token === process.env.BOT_TOKEN_BETA) return "BETA";
     return "PROD";
 }
+
+export const getDataPath = () => {
+    return process.env.DATA_DIR ?? path.join(__dirname, "..", "data");
+}
+
+/* c8 ignore next 7 */
+export const init = () => {
+    const dataPath = getDataPath();
+    const modmedPath = path.join(dataPath, "modmed.json");
+    if(!_fs.existsSync(modmedPath)) _fs.writeFileSync(modmedPath, "[]");
+}
+init();

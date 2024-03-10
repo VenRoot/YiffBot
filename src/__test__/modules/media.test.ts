@@ -373,6 +373,8 @@ describe('send', () => {
 
 describe('uploadMedia', () => { 
 
+    const dataPath = core.getDataPath();
+
     describe('successful tests', () => { 
 
         let getFileSpy: jest.SpyInstance;
@@ -399,9 +401,10 @@ describe('uploadMedia', () => {
                 from: {id: 0, first_name: "Test", is_bot: false},
                 message_id: 0,
             }
+            
             await media.uploadMedia(message, "photo");
             expect(downloadFileSpy).toHaveBeenCalledTimes(1);
-            expect(downloadFileSpy).toHaveBeenCalledWith("https://api.telegram.org/file/botINVALID/INVALID", path.join(__dirname, "..", "..", "data", "pics", "normal", "INVALID.jpg"));
+            expect(downloadFileSpy).toHaveBeenCalledWith("https://api.telegram.org/file/botINVALID/INVALID", path.join(dataPath, "pics", "normal", "INVALID.jpg"));
             expect(true).toBe(true);
         });
 
@@ -415,7 +418,7 @@ describe('uploadMedia', () => {
             }
             await media.uploadMedia(message, "animation");
             expect(downloadFileSpy).toHaveBeenCalledTimes(1);
-            expect(downloadFileSpy).toHaveBeenCalledWith("https://api.telegram.org/file/botINVALID/INVALID", path.join(__dirname, "..", "..", "data", "pics", "normal", "INVALID.gif"));
+            expect(downloadFileSpy).toHaveBeenCalledWith("https://api.telegram.org/file/botINVALID/INVALID", path.join(dataPath, "pics", "normal", "INVALID.gif"));
             expect(true).toBe(true);
         });
 
@@ -429,7 +432,7 @@ describe('uploadMedia', () => {
             }
             await media.uploadMedia(message, "video");
             expect(downloadFileSpy).toHaveBeenCalledTimes(1);
-            expect(downloadFileSpy).toHaveBeenCalledWith("https://api.telegram.org/file/botINVALID/INVALID", path.join(__dirname, "..", "..", "data", "pics", "normal", "INVALID.mp4"));
+            expect(downloadFileSpy).toHaveBeenCalledWith("https://api.telegram.org/file/botINVALID/INVALID", path.join(dataPath, "pics", "normal", "INVALID.mp4"));
             expect(true).toBe(true);
         });
     });

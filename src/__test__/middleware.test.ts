@@ -1788,7 +1788,7 @@ describe('addCaptionToMedia', () => {
         const ctx = createPrivateCTX(
           "/addmodmed 2 TEST",
           1,
-          1,
+          -1,
           1,
           "Test",
           undefined,

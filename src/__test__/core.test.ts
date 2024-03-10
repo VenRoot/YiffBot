@@ -58,7 +58,7 @@ describe('checkAdmin', () => {
 
     it("should return false if the user is not an admin", async () => {
         queryMock.mockImplementation(() => Promise.resolve([] as User[]));
-        await expect(core.checkAdmin(1)).resolves.toBe(false);
+        await expect(core.checkAdmin(-1)).resolves.toBe(false);
     });
     it("should return false if no user is passed", async () => {
         await expect(core.checkAdmin(null as any)).resolves.toBe(false);
@@ -70,21 +70,32 @@ describe('ReportError', () => {
     beforeAll(() => {
         sendMessageSpy = jest.spyOn(bot.bot.api, "sendMessage");
         pingMock.mockClear();
-        queryMock.mockImplementation(() => Promise.resolve([{userid: 1}, {userid: 2}] as User[])); // Should be implemented for each test
         getConnectionMock.mockClear();
         createPool.mockClear();
     });
 
+    afterEach(() => {
+        queryMock.mockClear();
+        sendMessageSpy.mockClear();
+    })
+
     afterAll(() => {
         sendMessageSpy.mockReset();
-        queryMock.mockClear();
     });
 
     it("should send a message to all admins", async () => {
+        queryMock.mockImplementation(() => Promise.resolve([{userid: 1}, {userid: 2}, {userid: 621}] as User[])); // Should be implemented for each test
         await core.ReportError({ chat: { id: 1 } });
         expect(queryMock).toHaveBeenCalled();
-        expect(sendMessageSpy).toHaveBeenCalledTimes(4);
+        console.warn(sendMessageSpy.mock.calls);
+        expect(sendMessageSpy).toHaveBeenCalledTimes(6);
     });
+
+    it("Should still send a message to the owner regardless", async () => {
+        queryMock.mockImplementation(() => Promise.resolve([{userid: 1}, {userid: 2}] as User[])); // Should be implemented for each test
+        await core.ReportError({ chat: { id: 1 } });
+        expect(sendMessageSpy).toHaveBeenCalledTimes(6);
+    })
 })
 
 interface User {
