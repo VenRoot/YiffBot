@@ -3,3 +3,7 @@ users/
 user_cache/
 bin/
 data/
+.env
+prod.env
+docker*
+coverage/

@@ -1,157 +1,150 @@
 import mariadb from 'mariadb';
+import { checkEnvVariables } from './modules/envs';
+import { DBError } from './modules/exceptions';
 
 interface User {
     userid: number;
-}
-
-if(!process.env.DB_HOST ||
-    !process.env.DB_USER ||
-    !process.env.DB_PASS ||
-    !process.env.DB_NAME || 
-    !process.env.DB_PORT) throw new Error("Missing DB env vars");
-
-const pool = mariadb.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 3306,
-    connectionLimit: 50,
-    bigIntAsNumber: true
-});
-
-export async function connect() {
-    if(!healthCheck())
-    {
-        throw new Error("Failed to connect to database");
-    }
-    return pool.getConnection();
+    name: string;
 }
 
 
-async function healthCheck() {
-    let con: mariadb.PoolConnection | undefined;
-    try
-    {
-        con = await pool.getConnection();
-        await con.ping();
 
-        // Check if database exists
-        await con.query("CREATE DATABASE IF NOT EXISTS yiffslut");
-        await con.query("USE yiffslut");
-        await con.query("CREATE TABLE IF NOT EXISTS users (userid BIGINT PRIMARY KEY)");
-        return true;
-    }
-    catch(err)
-    {
-        //@ts-ignore
-        throw new Error(err);
-    }
-    finally
-    {
-        if(con) con.release();
-    }
-}
+class DatabaseService implements Disposable {
+    private pool: mariadb.Pool;
 
-async function storeData(data: User)
-{
-    let con: mariadb.PoolConnection | undefined;
-    try
-    {
-        con = await connect();
-        let result = await con.query("INSERT INTO users (userid) VALUES (?)", [data.userid]);
+    constructor(pool: mariadb.Pool) {
+        this.pool = pool;
+    }
 
-    }
-    catch(err)
-    {
-        throw new Error("Failed to store data");
-    }
-    finally
-    {
-        if(con) con.release();
-    }
-}
-
-async function deleteData(query: User)
-{
-    let con: mariadb.PoolConnection | undefined;
-    try
-    {
-        con = await connect();
-        let result = await con.query("DELETE FROM users WHERE userid=?", [query.userid]);
-    }
-    catch(err)
-    {
-        throw new Error("Failed to delete data");
-    }
-    finally
-    {
-        if(con) con.release();
-    }
-}
-
-async function getData(query: User)
-{
-    let con: mariadb.PoolConnection | undefined;
-    try
-    {
-        con = await connect();
-        console.log("SELECT * FROM users WHERE userid="+query.userid);
-        const result = await con.query<User[]>("SELECT * FROM users WHERE userid=?", [query.userid]);
-        console.log(result);
-        
-        if(result.length === 0) return null;
-        return result[0];
-    }
-    catch(err)
-    {
-
-        throw new Error("Failed to get data" + JSON.stringify(err));
-    }
-    finally
-    {
-        if(con) con.release();
-    }
-}
-
-async function getAllData()
-{
-    const results: number[] = [];
-    let con: mariadb.PoolConnection | undefined;
-    try
-    {
-        con = await connect();
-        const res = await con.query<User[]>("SELECT * FROM users");
-        if(res.length === 0) return null;
-        for(const user of res)
+    private async healthCheck() {
+        let con: mariadb.PoolConnection | undefined;
+        try
         {
-            results.push(user.userid);
+            con = await this.pool.getConnection();
+            await con.ping();
+            con.query("CREATE TABLE IF NOT EXISTS users (userid INT NOT NULL, name VARCHAR(255) NOT NULL, PRIMARY KEY (userid))");
+            return true;
         }
-        debugger;
-        return results;
+        catch(err)
+        {
+            console.error("Database health check failed:", err);
+            return false;
+        }
+        finally
+        {
+            con?.release();
+        }
     }
-    catch(err)
-    {
-        throw new Error("Failed to get data");
+
+    public async initialConnect() {
+        const healthy = await this.healthCheck();
+        if(!healthy) {
+            throw new Error("Failed to connect to database");
+        }
+        return this.pool.getConnection();
     }
-    finally
-    {
-        if(con) con.release();
+    /** @throws {DBError} */
+    public async storeData(data: Partial<User> & {userid: number}): Promise<void> {
+        let con: mariadb.PoolConnection | undefined;
+        try {
+            const con = await this.pool.getConnection();
+            data.name 
+            ? await con.query("INSERT INTO users (userid, name) VALUES (?,?)", [data.userid, data.name])
+            : await con.query("INSERT INTO users (userid) VALUES (?)", [data.userid]);
+        }
+        catch(err) {
+            console.error("Failed to store data:", err);
+            throw new DBError(err, "store");
+        }
+        finally {
+            /* c8 ignore next */
+            con?.release();
+        }
+        
+    }
+    /** @throws {DBError} */
+    public async deleteData(query: Partial<User> & {userid: number}) {
+        let con: mariadb.PoolConnection | undefined;
+        try {
+            const con = await this.pool.getConnection();
+            await con.query("DELETE FROM users WHERE userid = ?", [query.userid]);
+        }
+        catch(err) {
+            console.error("Failed to delete data:", err);
+            throw new DBError(err, "delete");
+        }
+        finally {
+            /* c8 ignore next */
+            con?.release();
+        }
+    }
+    /** @throws {DBError} */
+    public async getData(query: Partial<User> & {userid: number}): Promise<User | null> {
+        let con: mariadb.PoolConnection | undefined;
+        try {
+            const con = await this.pool.getConnection();
+            const result = await con.query<User[]>("SELECT * FROM users WHERE userid = ?", [query.userid]);
+            return result.length > 0? result[0] : null;
+        }
+        catch(err) {
+            console.error("Failed to get data:", err);
+            throw new DBError(err, "get");
+        }
+        finally {
+            /* c8 ignore next */
+            con?.release();
+        }
+    }
+    /** @throws {DBError} */
+    public async getAllData() {
+        let con: mariadb.PoolConnection | undefined;
+        const results: User[] = [];
+
+        try {
+            con = await this.pool.getConnection();
+            const result = await con.query<User[]>("SELECT * FROM users");
+            for (const row of result) {
+                results.push(row);
+            }
+            return results;
+        }
+        catch(err) {
+            console.error("Failed to get data:", err);
+            throw new DBError(err, "get");
+        }
+        finally {
+            /* c8 ignore next */
+            con?.release();
+        }
+
+    }
+    /* c8 ignore next 4 */
+    [Symbol.dispose] () {
+        this.pool.end();
+        console.log("Database connection closed");
     }
 }
 
-export {
-    storeData,
-    getData,
-    deleteData,
-    getAllData
+function initializeDatabase() {
+    if (!checkEnvVariables()) {
+        /* c8 ignore next 2 */
+        throw new Error("Missing DB environment variables");
+    }
+
+    return mariadb.createPool({
+        host: process.env.DB_HOST,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASS,
+        database: process.env.DB_NAME,
+        port: parseInt(process.env.DB_PORT ?? "3306", 10),
+        connectionLimit: 50,
+        bigIntAsNumber: true,
+    });
 }
 
 
-setTimeout(() => {
-    console.log("STARTING HEALTH CHECK");
-    console.log(process.env.DB_HOST, process.env.DB_USER, process.env.DB_PASS, process.env.DB_NAME, process.env.DB_PORT)
-    healthCheck().catch(err => {
-        throw new Error("STARTUP: Failed to connect to database" + err)
-    })
-}, 1000);
+const pool = initializeDatabase();
+const databaseService = new DatabaseService(pool);
+
+export default DatabaseService;
+export { databaseService };

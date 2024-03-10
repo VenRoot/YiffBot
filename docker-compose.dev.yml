@@ -9,23 +9,22 @@ services:
       - yiffslutdata_dev:/app/data
     environment:
       TZ: Europe/Berlin
-      DB_HOST: mariadb
-      DB_USER: yiffslut
-      DB_PASS: yiffslut
-      DB_NAME: yiffslut
-      DB_PORT: 3306
+      DATA_DIR: /app/data
+    env_file:
+      - .env.docker
 
   mariadb:
+    container_name: yiffbot_dev_mariadb
     image: mariadb:latest
     restart: always
     volumes:
       - mariadbdata_dev:/var/lib/mysql
     environment:
       TZ: Europe/Berlin
-      MYSQL_ROOT_PASSWORD: yiffslut
-      MYSQL_DATABASE: yiffslut
-      MYSQL_USER: yiffslut
-      MYSQL_PASSWORD: yiffslut
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DB}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
     
 
 volumes:
