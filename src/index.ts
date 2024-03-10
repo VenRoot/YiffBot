@@ -10,6 +10,7 @@ if(process.env.BOT_TOKEN === undefined) throw "No Bot_Token";
 import { bot } from './bot';
 import * as middleware from "./modules/middleware";
 import * as media from "./modules/media";
+import { EmptyDirectoryError, EmptyFileError, OutOfRetiesError } from './modules/exceptions';
 
 bot.command("caption", middleware.addCaptionToMedia);
 bot.command("start", middleware.start);
@@ -58,15 +59,25 @@ bot.api.setMyCommands([
 //Start the bot
 
 s.scheduleJob("0 * * * *", () => {
-    if(isChristmas(new Date()))
-    {
-        media.send("christmas");
-    }
-    else if(isNewYear(new Date()))
-    {
-        media.send("newyear");
-    }
-    else media.send("normal");
+    let mode: "normal" | "christmas" | "newyear" = "normal";
+    const date = new Date();
+    if(isChristmas(date)) mode = "christmas";
+    else if(isNewYear(date)) mode = "newyear";
+    media.send(mode).catch((err) => {
+        if(err instanceof OutOfRetiesError) {
+            bot.api.sendMessage(config.VenID, "ERROR: Out of retries sending media");
+        }
+        if(err instanceof EmptyDirectoryError) {
+            bot.api.sendMessage(config.VenID, "ERROR: Directory is empty");
+        }
+        if(err instanceof EmptyFileError) {
+            bot.api.sendMessage(config.VenID, "ERROR: File is empty");
+        }
+        else {
+            console.error(err);
+            bot.api.sendMessage(config.VenID, "ERROR: "+JSON.stringify(err));
+        }
+    })
 });
 
 //Send a picture every hour
