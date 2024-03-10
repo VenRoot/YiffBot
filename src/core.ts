@@ -121,4 +121,4 @@ export const init = () => {
     const modmedPath = path.join(dataPath, "modmed.json");
     if(!_fs.existsSync(modmedPath)) _fs.writeFileSync(modmedPath, "[]");
 }
-init();
+if(process.env.NODE_ENV !== "test") init();

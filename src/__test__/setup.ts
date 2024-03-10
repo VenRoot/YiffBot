@@ -1,4 +1,5 @@
 process.env.BOT_URL = "http://localhost:9001";
+process.env.NODE_ENV = "test";
 
 const envs = [
     "VEN_ID",
