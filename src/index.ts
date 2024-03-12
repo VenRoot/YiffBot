@@ -69,10 +69,10 @@ s.scheduleJob("0 * * * *", async () => {
         if(err instanceof OutOfRetiesError) {
             bot.api.sendMessage(config.VenID, "ERROR: Out of retries sending media");
         }
-        if(err instanceof EmptyDirectoryError) {
+        else if(err instanceof EmptyDirectoryError) {
             bot.api.sendMessage(config.VenID, "ERROR: Directory is empty");
         }
-        if(err instanceof EmptyFileError) {
+        else if(err instanceof EmptyFileError) {
             bot.api.sendMessage(config.VenID, "ERROR: File is empty");
         }
         else {
