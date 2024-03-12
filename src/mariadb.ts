@@ -22,7 +22,7 @@ class DatabaseService implements Disposable {
         {
             con = await this.pool.getConnection();
             await con.ping();
-            con.query("CREATE TABLE IF NOT EXISTS users (userid INT NOT NULL, name VARCHAR(255) NOT NULL, PRIMARY KEY (userid))");
+            con.query("CREATE TABLE IF NOT EXISTS users (userid BIGINT UNSIGNED NOT NULL, name VARCHAR(255) NOT NULL, PRIMARY KEY (userid))");
             return true;
         }
         catch(err)
