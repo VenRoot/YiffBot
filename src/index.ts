@@ -58,12 +58,14 @@ bot.api.setMyCommands([
 
 //Start the bot
 
-s.scheduleJob("0 * * * *", () => {
-    let mode: "normal" | "christmas" | "newyear" = "normal";
-    const date = new Date();
-    if(isChristmas(date)) mode = "christmas";
-    else if(isNewYear(date)) mode = "newyear";
-    media.send(mode).catch((err) => {
+s.scheduleJob("0 * * * *", async () => {
+    try {
+        let mode: "normal" | "christmas" | "newyear" = "normal";
+        const date = new Date();
+        if(isChristmas(date)) mode = "christmas";
+        else if(isNewYear(date)) mode = "newyear";
+        await media.send(mode);
+    } catch(err) {
         if(err instanceof OutOfRetiesError) {
             bot.api.sendMessage(config.VenID, "ERROR: Out of retries sending media");
         }
@@ -77,7 +79,7 @@ s.scheduleJob("0 * * * *", () => {
             console.error(err);
             bot.api.sendMessage(config.VenID, "ERROR: "+JSON.stringify(err));
         }
-    })
+    }
 });
 
 //Send a picture every hour
