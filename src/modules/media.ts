@@ -57,16 +57,14 @@ const getRandomMedia = async (dir: directories) => {
 
     await fs.mkdir(_path, {recursive: true});
     const files = await fs.readdir(_path);
-    // console.warn(files);
 
-    let admins = await databaseService.getAllData() || [{ name: "Ven", userid: config.VenID}];
+    let admins = await databaseService.getAllData();
+    if (!admins.find(admin => admin.userid === config.VenID)) admins.push({ name: "Ven", userid: config.VenID });
 
+    if(files.length === 0) return null;
+    
     if(files.length < 10) {
-        const warningMessage = files.length === 0 ? `Ordner ist leer` : `Achtung! Nur noch ${files.length} Medien! Bitte nachfüllen`;
-        await notifyAdmins(admins, warningMessage);
-        if(files.length === 0) {
-            return null; // Keine Medien vorhanden, frühzeitige Rückkehr
-        }
+        await notifyAdmins(admins, `Achtung! Nur noch ${files.length} Medien! Bitte nachfüllen`);
     }
 
     return files[Math.floor(Math.random() * files.length)];

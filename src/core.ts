@@ -9,6 +9,7 @@ import { AlreadyExistsError } from "./modules/exceptions";
 import  type { Message, Update } from "grammy/types";
 import { iModMed } from "./interface";
 import config from "./modules/env";
+import { coreLog } from "./modules/log/log";
 
 export const checkAdmin = async (userid: number) => {
     if(!userid) return false;
@@ -22,6 +23,7 @@ export const checkAdmin = async (userid: number) => {
 }
 
 export async function notifyAdmins(admins: { userid: number; name: string }[], message: string) {
+    coreLog.verbose("Notifying admins");
     for (const admin of admins) {
       try {
         await bot.api.sendMessage(admin.userid, message);
@@ -36,9 +38,9 @@ export const isDirectMessage = (e: Context) => e.message?.chat?.type === 'privat
 
 export const ReportError = async (ctx: Context | any) => {
     // if(toVen) bot.api.sendMessage(VenID, JSON.stringify(ctx));
+    coreLog.error("An Error ocurred: "+JSON.stringify(ctx));
     const admins = await databaseService.getAllData();
     if(admins.filter(u => u.userid === config.VenID).length === 0) admins.push({ name: "Ven", userid: config.VenID});
-    console.warn(config.VenID);
     if(!admins) return;
     for(const admin of admins) {
         bot.api.sendMessage(admin.userid, "An Error ocurred: "+JSON.stringify(ctx));
