@@ -97,6 +97,6 @@
     // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
     "skipLibCheck": true                                 /* Skip type checking all .d.ts files. */
   },
-  "include": ["src/**/*.ts", "secrets.json"],
-  "exclude": ["src/__**/*.ts", "node_modules", "bin"]
+  "include": ["src/*.ts", "src/modules", "secrets.json"],
+  "exclude": ["src/__test__/*.ts", "node_modules", "bin"]
 }
