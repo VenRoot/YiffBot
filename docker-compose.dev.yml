@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   YiffBot_dev:
-    image: dockerreg.m-loeffler.de/yiffbot:dev
+    image: dockerreg.m-loeffler.de/yiffbot:delete
     container_name: yiffbot_dev
     restart: always
     volumes:
