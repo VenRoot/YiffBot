@@ -14,6 +14,8 @@ import { AlreadyExistsError, DBError, EmptyDirectoryError, EmptyFileError, Inval
 import * as core from "../core";
 import * as media from "./media";
 import * as special from "../special";
+import { middlewareLog } from "./log/log";
+
 
 export async function caption(ctx: Context) {
     try {
@@ -22,18 +24,23 @@ export async function caption(ctx: Context) {
     catch(err) {
 
         if(err instanceof NoReplyToDocumentError) {
+            middlewareLog.verbose("CAPTION: No reply to document");
             ctx.reply("Please reply to a media to add it to the caption list");
         }
         else if(err instanceof NotDirectMessageError) {
+            middlewareLog.verbose("CAPTION: No direct message");
             ctx.reply("This command can only be used in direct messages");
         }
         else if(err instanceof NoCaptionError) {
+            middlewareLog.verbose("CAPTION: No caption");
             ctx.reply("No caption given");
         }
         else if(err instanceof PermissionDeniedError) {
+            middlewareLog.verbose("CAPTION: PERMISSION DENIED");
             ctx.reply("You are not allowed to use this command");
         }
         else {
+            middlewareLog.verbose("CAPTION: UNKNOWN ERROR" + JSON.stringify(err));
             core.ReportError(ctx);
             console.error(err);
         }

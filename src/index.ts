@@ -11,6 +11,7 @@ import { bot } from './bot';
 import * as middleware from "./modules/middleware";
 import * as media from "./modules/media";
 import { EmptyDirectoryError, EmptyFileError, OutOfRetiesError } from './modules/exceptions';
+import { indexLog } from './modules/log/log';
 
 bot.command("caption", middleware.addCaptionToMedia);
 bot.command("start", middleware.start);
@@ -37,6 +38,7 @@ bot.on(":video", (e) => middleware.handleMedia(e, "video"));
 bot.start({drop_pending_updates: process.env.DROP_PENDING_UPDATES === "true", onStart: () => {
     console.log("Started bot in "+getReverseToken(bot.token) + " mode");
     bot.api.sendMessage(config.VenID, "Bot started");
+    indexLog.verbose("Started bot in "+getReverseToken(bot.token) + " mode");
 }});
 
 
@@ -67,15 +69,19 @@ s.scheduleJob("0 * * * *", async () => {
         await media.send(mode);
     } catch(err) {
         if(err instanceof OutOfRetiesError) {
+            indexLog.error("Out of retries sending media");
             bot.api.sendMessage(config.VenID, "ERROR: Out of retries sending media");
         }
         else if(err instanceof EmptyDirectoryError) {
+            indexLog.error("Directory is empty");
             bot.api.sendMessage(config.VenID, "ERROR: Directory is empty");
         }
         else if(err instanceof EmptyFileError) {
+            indexLog.error("File is empty");
             bot.api.sendMessage(config.VenID, "ERROR: File is empty");
         }
         else {
+            indexLog.error("UNKNOWN ERROR: " + JSON.stringify(err));
             console.error(err);
             bot.api.sendMessage(config.VenID, "ERROR: "+JSON.stringify(err));
         }
@@ -86,6 +92,7 @@ s.scheduleJob("0 * * * *", async () => {
 
 process.on('uncaughtException', (err: any) => {
     console.error(err);
+    indexLog.error("Uncaught Exception: "+JSON.stringify(err));
     ReportError(err);
     process.kill(process.pid, 'SIGINT');
 });

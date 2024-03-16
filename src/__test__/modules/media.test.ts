@@ -250,7 +250,7 @@ describe('send', () => {
         expect(fsUnlinkSpy).toHaveBeenCalledTimes(0);
        });
 
-       it("Should notify an admin if there are less than 10 files", async () => {
+       it("Should notify all admins (including Ven) if there are less than 10 files", async () => {
         queryMock.mockImplementation(() => Promise.resolve([{userid: -1, name: "Test User"}] as User[]));
         const newMediaFiles = [];
         for(let i = 0; i < 8; i++) {
@@ -263,7 +263,7 @@ describe('send', () => {
         expect(sendPhotoSpy).toHaveBeenCalledTimes(1);
         expect(fsStatSpy).toHaveBeenCalledTimes(1); // Says 2 instead of 1 if test above ran
         expect(readdirSpy).toHaveBeenCalledTimes(1);
-        expect(sendMessageSpy).toHaveBeenCalledTimes(1);
+        expect(sendMessageSpy).toHaveBeenCalledTimes(2); // Admin and Ven
        });
 
        it("Should not notify an admin if there are more than 10 files", async () => {
@@ -275,6 +275,20 @@ describe('send', () => {
         readdirSpy = jest.spyOn(fs, "readdir").mockResolvedValue([...newMediaFiles] as string[] as any);
         await media.send("normal");
         expect(sendMessageSpy).toHaveBeenCalledTimes(0);
+       });
+
+       it("Should always notify Ven", async () => {
+        queryMock.mockImplementation(() => Promise.resolve([] as User[]));
+        const newMediaFiles = [];
+        for(let i = 0; i < 6; i++) {
+           newMediaFiles.push(mediaFiles[0]);
+        }
+        readdirSpy = jest.spyOn(fs, "readdir").mockResolvedValue([...newMediaFiles] as string[] as any);
+        await media.send("normal");
+        expect(sendPhotoSpy).toHaveBeenCalledTimes(1);
+        expect(fsStatSpy).toHaveBeenCalledTimes(1); // Says 2 instead of 1 if test above ran
+        expect(readdirSpy).toHaveBeenCalledTimes(1);
+        expect(sendMessageSpy).toHaveBeenCalledTimes(1); //Ven
        });
 
 

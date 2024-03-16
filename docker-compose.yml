@@ -7,9 +7,11 @@ services:
     restart: always
     volumes:
       - yiffslutdata:/app/data
+      - ./logs:/app/logs
     env_file:
       - .env
     environment:
+      DOCKER: true
       TZ: Europe/Berlin
 
   mariadb:
