@@ -9,4 +9,4 @@ RUN npm i -g typescript
 
 RUN tsc
 
-CMD ["npm", "start:prod"]
+CMD ["npm", "run", "start:prod"]
