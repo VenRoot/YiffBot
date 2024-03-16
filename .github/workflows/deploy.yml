@@ -3,7 +3,7 @@ name: Build and Publish Docker Image
 on:
   push:
     branches:
-      - main # Oder deinen gewünschten Branch
+      - main
 
 jobs:
   test:
@@ -40,29 +40,17 @@ jobs:
     - name: Install Dependencies
       run: npm install
 
-    - name: Get Version
-      id: package-version
-      run: echo "::set-output name=version::$(node -p "require('./package.json').version")"
-
-    - name: Build Docker Image
-      run: docker build -t dockerreg.m-loeffler.de/yiffbot:${{ steps.package-version.outputs.version }} .    
-    - name: Push Docker Image
-      run: docker push dockerreg.m-loeffler.de/yiffbot:${{ steps.package-version.outputs.version }}
-
-    - name: Login to Docker Registry
-      uses: appleboy/ssh-action@v1.0.0
+    - name: Login to docker registry
+      uses: docker/login-action@v3
       with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.SSH_USERNAME_PROD }}
-        password: ${{ secrets.SSH_PASSWORD_PROD }}
-        port: ${{ secrets.SSH_PORT }}
-        script: 'DEPLOY_ENV=prod DOCKER_USERNAME=${{secrets.DOCKER_USERNAME}} DOCKER_PASSWORD=${{secrets.DOCKER_PASSWORD}} docker login'
+        registry : harbor.m-loeffler.de
+        username: ${{ secrets.HARBOR_ROBOT_NAME }}
+        password: ${{ secrets.HARBOR_ROBOT_SECRET }}
 
-    - name: Deploy on server
-      uses: appleboy/ssh-action@v1.0.0
+    - name: Build and push Docker Image
+      uses: docker/build-push-action@v3
       with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.SSH_USERNAME }}
-        password: ${{ secrets.SSH_PASSWORD }}
-        port: ${{ secrets.SSH_PORT }}
-        script: 'DEPLOY_ENV=prod docker compose up -d'
+        context: .
+        file: Dockerfile
+        push: true
+        tags: harbor.m-loeffler.de/yiffbot/yiffbot:latest
