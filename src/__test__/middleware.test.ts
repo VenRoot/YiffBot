@@ -43,6 +43,19 @@ InputFile: class {
 }
 }));
 
+jest.mock("fs", () => ({
+  ...jest.requireActual("fs"),
+  createWriteStream: jest.fn().mockReturnValue({
+    on: jest.fn().mockImplementation((event, cb) => {
+      if(event === "finish") cb();
+    }),
+    close: jest.fn(),
+  }),
+  unlink: jest.fn(),
+  createReadStream: jest.fn(),
+  stat: jest.fn().mockResolvedValue({ size: 1 }),
+}))
+
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(),
   readFile: jest.fn(),
