@@ -43,6 +43,19 @@ InputFile: class {
 }
 }));
 
+jest.mock("fs", () => ({
+  ...jest.requireActual("fs"),
+  createWriteStream: jest.fn().mockReturnValue({
+    on: jest.fn().mockImplementation((event, cb) => {
+      if(event === "finish") cb();
+    }),
+    close: jest.fn(),
+  }),
+  unlink: jest.fn(),
+  createReadStream: jest.fn(),
+  stat: jest.fn().mockResolvedValue({ size: 1 }),
+}))
+
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(),
   readFile: jest.fn(),
@@ -1552,7 +1565,8 @@ describe('handleMedia', () => {
         );
         const ctxSpy = jest.spyOn(ctx, "reply");
         await middleware.handleMedia(ctx as Context, "photo");
-        expect(ctxSpy).toHaveBeenCalledWith("This command can only be used in direct messages");
+        expect(ctxSpy).not.toHaveBeenCalled(); // It should not call the function if it sees a media in the group
+        // expect(ctxSpy).toHaveBeenCalledWith("This command can only be used in direct messages");
       });
     });
 

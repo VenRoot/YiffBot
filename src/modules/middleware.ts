@@ -240,11 +240,11 @@ export async function removeAdmin(ctx: Context) {
 
 export async function handleMedia(e: Context, type: "photo" | "animation" | "video") {
     try {
-        if(!type) throw new MissingParamsError("No media type given");
-        if(!e.message) throw new NoMessageError();
+        if(!e.message && !core.isDirectMessage(e)) throw new NoMessageError();
         if(!core.isDirectMessage(e)) throw new NotDirectMessageError();
+        if(!type) throw new MissingParamsError("No media type given");
         if(!await core.checkAdmin(e.message?.from.id ?? -1)) throw new PermissionDeniedError();
-        await media.uploadMedia(e.message, type);
+        await media.uploadMedia(e.message!, type);
     }
     catch(err) {
         if(err instanceof MissingParamsError) {
@@ -254,7 +254,7 @@ export async function handleMedia(e: Context, type: "photo" | "animation" | "vid
             e.reply("No message object recieved-");
         }
         else if (err instanceof NotDirectMessageError) {
-            e.reply("This command can only be used in direct messages");
+            // e.reply("This command can only be used in direct messages");
         }
         else if (err instanceof PermissionDeniedError) {
             e.reply("You are not allowed to use this command");
