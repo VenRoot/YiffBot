@@ -1,5 +1,5 @@
 import fs from "fs/promises";
-import { InputFile } from "grammy";
+import { GrammyError, InputFile } from "grammy";
 import path from "path";
 import { bot, getToken } from "../bot";
 import { getDataPath, getGroups, notifyAdmins } from "../core";
@@ -11,7 +11,7 @@ import * as downloadFile from "./file/downloadFile";
 import config from "./env";
 import type { Animation, Message, PhotoSize, Update, Video } from "grammy/types";
 import { databaseService } from "../mariadb";
-import { EmptyDirectoryError, EmptyFileError, GetFileError, InvalidMediaError, OutOfRetiesError, NoMediaError } from "./exceptions";
+import { EmptyDirectoryError, EmptyFileError, GetFileError, InvalidMediaError, OutOfRetiesError, NoMediaError, InvalidStatusCode } from "./exceptions";
 
 /**
  * 
@@ -72,10 +72,9 @@ const getRandomMedia = async (dir: directories) => {
 
 /**
  * 
- * @throws {PermissionDeniedError | GetFileError | EmptyFileError | InvalidStatusCode | HttpError}
+ * @throws {NoMediaError | GrammyError | InvalidStatusCode | HttpError | EmptyFileError}
  */
 export const uploadMedia = async (message: (Message & Update.NonChannel), mediaType: MediaType) => {
-    console.warn(message, mediaType); //Here, both parameters are undefined
     let directory = "normal";
     if (special.christmas) directory = "christmas";
     else if (special.newyear) directory = "newyear";
@@ -84,9 +83,7 @@ export const uploadMedia = async (message: (Message & Update.NonChannel), mediaT
     let mediaObj: PhotoSize | Animation | Video | null = getMediaObject(message, mediaType);
 
     const PID = mediaObj.file_id;
-    const file = await bot.api.getFile(PID).catch(err => {
-        throw new GetFileError(`Failed to get ${mediaType}: ${err}`);
-    });
+    const file = await bot.api.getFile(PID);
     const fileExtension = mediaType === "photo" ? "jpg" : (mediaType === "animation" ? "gif" : "mp4");
     const link = `https://api.telegram.org/file/bot${getToken()}/${file.file_path}`;
     const filePath = path.join(getDataPath(), "pics", directory, `${PID}.${fileExtension}`);
@@ -145,11 +142,12 @@ export function getAutomaticMediaObject(message: Message) {
     return {media: mediaObj, type: path.extname(mediaObj.file_id).toLocaleLowerCase()};
 }
 
+/**
+ * 
+ * @throws {NoMediaError}
+ */
 export function getMediaObject(message: Message, mediaType: string) {
     let mediaObj: PhotoSize | Animation | Video;
-
-    console.log(mediaType)
-
     if (mediaType === "photo" && message?.photo) {
         mediaObj = message.photo[message?.photo?.length - 1];
     } else if (mediaType === "animation" && message?.animation) {

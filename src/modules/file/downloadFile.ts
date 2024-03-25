@@ -10,7 +10,7 @@ export function downloadFile(link: string, filePath: string) {
 
         https.get(link, (response) => {
             if(response.statusCode !== 200) {
-                return reject(new InvalidStatusCode(link, response.statusCode));
+                return reject(new InvalidStatusCode(response.statusCode));
             }
  
             writeFile(file, response).then(resolve).catch((err) => {

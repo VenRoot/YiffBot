@@ -8,9 +8,9 @@
  * As less data should be passed to the functions
  */
 
-import { Context } from "grammy";
+import { Context, GrammyError } from "grammy";
 import * as modmed from "./modmed";
-import { AlreadyExistsError, DBError, EmptyDirectoryError, EmptyFileError, InvalidMediaError, InvalidParamsError, MissingParamsError, NoCaptionError, NoMessageError, NoReplyToDocumentError, NoReplyToMessageError, NotDirectMessageError, OutOfRetiesError, PermissionDeniedError } from "./exceptions";
+import { AlreadyExistsError, DBError, EmptyDirectoryError, EmptyFileError, GetFileError, HttpError, InvalidMediaError, InvalidParamsError, InvalidStatusCode, MissingParamsError, NoCaptionError, NoMediaError, NoMessageError, NoReplyToDocumentError, NoReplyToMessageError, NotDirectMessageError, OutOfRetiesError, PermissionDeniedError } from "./exceptions";
 import * as core from "../core";
 import * as media from "./media";
 import * as special from "../special";
@@ -57,7 +57,6 @@ export async function sendman(ctx: Context) {
         if(!ctx.message) throw new NoMessageError();
         if(!(await core.checkAdmin(ctx.message?.from.id?? -1))) throw new PermissionDeniedError();
         const params = core.extractCommandArgument(ctx.message)?.trim() || "normal";
-        console.log([params]);
         if(params !== "normal" && params !== "christmas" && params !== "newyear") throw new InvalidParamsError(`Invalid params. Usage: /sendman <newyear | christmas | normal>? | Your input: ${params}`);
         await media.send(params);
     }
@@ -245,11 +244,13 @@ export async function handleMedia(e: Context, type: "photo" | "animation" | "vid
         if(!e.message) throw new NoMessageError();
         if(!core.isDirectMessage(e)) throw new NotDirectMessageError();
         if(!await core.checkAdmin(e.message?.from.id ?? -1)) throw new PermissionDeniedError();
-        console.warn(type);
         await media.uploadMedia(e.message, type);
     }
     catch(err) {
-        if(err instanceof NoMessageError) {
+        if(err instanceof MissingParamsError) {
+            e.reply("No media type given");
+        }
+        else if(err instanceof NoMessageError) {
             e.reply("No message object recieved-");
         }
         else if (err instanceof NotDirectMessageError) {
@@ -258,8 +259,30 @@ export async function handleMedia(e: Context, type: "photo" | "animation" | "vid
         else if (err instanceof PermissionDeniedError) {
             e.reply("You are not allowed to use this command");
         }
+        else if(err instanceof NoMediaError) {
+            e.reply(err.message);
+        }
+        else if(err instanceof InvalidStatusCode) {
+            e.reply(`Downloading the media failed: ${err.message}`);
+        }
+        else if(err instanceof HttpError) {
+            e.reply("Error while sending http request to receive the media: " + err.message);
+        }
         else if(err instanceof EmptyFileError) {
-            e.reply("File is empty! Try again");
+            e.reply("Error: File is empty");
+        }
+        else if(err instanceof GrammyError) {
+            if(err.description === "Bad Request: file is too big") {
+                e.reply("ERROR: File is too big, maximum size is 50MB");
+            }
+            else {
+                e.reply("Error from the Telegram API while uploading the file: " + err.description);
+            }
+        }
+        else {
+            e.reply("Unknown error, informing the developer");
+            core.ReportError(e);
+            console.error(err);
         }
     }
 }

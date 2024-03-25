@@ -19,6 +19,7 @@ import { EmptyDirectoryError, EmptyFileError, GetFileError, OutOfRetiesError } f
 import type { File, Message, Update } from "grammy/types";
 import * as downloadFile from "../../modules/file/downloadFile";
 import * as checkIfValid from "../../modules/file/checkIfValid";
+import { GrammyError } from "grammy";
 jest.spyOn(bot, "getToken").mockImplementation(() => "INVALID");
 
 const mediaFiles = [
@@ -252,7 +253,7 @@ describe('send', () => {
 
        it("Should notify all admins (including Ven) if there are less than 10 files", async () => {
         queryMock.mockImplementation(() => Promise.resolve([{userid: -1, name: "Test User"}] as User[]));
-        const newMediaFiles = [];
+        const newMediaFiles: string[] = [];
         for(let i = 0; i < 8; i++) {
            newMediaFiles.push(mediaFiles[0]);
         }
@@ -268,7 +269,7 @@ describe('send', () => {
 
        it("Should not notify an admin if there are more than 10 files", async () => {
         queryMock.mockImplementation(() => Promise.resolve([{userid: -1, name: "Test User"}] as User[]));
-        const newMediaFiles = [];
+        const newMediaFiles: string[] = [];
         for(let i = 0; i < 12; i++) {
            newMediaFiles.push(mediaFiles[0]);
         }
@@ -279,7 +280,7 @@ describe('send', () => {
 
        it("Should always notify Ven", async () => {
         queryMock.mockImplementation(() => Promise.resolve([] as User[]));
-        const newMediaFiles = [];
+        const newMediaFiles: string[] = [];
         for(let i = 0; i < 6; i++) {
            newMediaFiles.push(mediaFiles[0]);
         }
@@ -452,43 +453,58 @@ describe('uploadMedia', () => {
     });
 
     describe("Error handling", () => {
-        let getFileSpy: jest.SpyInstance;
+        
+        describe("getMediaObj error", () => {
+            let getFileSpy: jest.SpyInstance;
 
-        beforeEach(() => {
-            getFileSpy = jest.spyOn(bot.bot.api, "getFile").mockImplementation(() => Promise.resolve({file_path: "INVALID"} as File));
+            beforeEach(() => {
+                getFileSpy = jest.spyOn(bot.bot.api, "getFile").mockImplementation(() => Promise.resolve({file_path: "INVALID"} as File));
+            });
+    
+            afterEach(() => {
+                getFileSpy?.mockClear();
+            });
+    
+            afterAll(() => {
+                getFileSpy?.mockRestore();
+            });
+    
+            it("Should throw an error if getMediaObj throws", async () => {
+                const message: (Message & Update.NonChannel) = {
+                    photo: [{file_id: "INVALID", file_unique_id: "INVALID", height: 0, width: 0, file_size: 0}],
+                    chat: {id: 0, type: "private", first_name: "Test"},
+                    date: Date.now(),
+                    from: {id: 0, first_name: "Test", is_bot: false},
+                    message_id: 0,
+                }
+                await expect(media.uploadMedia(message, "INVALID" as any)).rejects.toBeInstanceOf(Error);
+            });
         });
 
-        afterEach(() => {
-            getFileSpy?.mockClear();
+        describe('GetFileError', () => {
+            let getFileSpy: jest.SpyInstance;
+
+            beforeEach(() => {
+                getFileSpy = jest.spyOn(bot.bot.api, "getFile").mockImplementation(() => Promise.reject(new GrammyError("TEST Error", {ok: false, description: "TEST", error_code: -1}, "getFile", {})));
+            });
+
+            afterEach(() => {
+                getFileSpy?.mockClear();
+            });
+
+            it("Should throw a GetFileError if bot.api.getFile fails", async () => {
+                const message: (Message & Update.NonChannel) = {
+                    photo: [{file_id: "INVALID", file_unique_id: "INVALID", height: 0, width: 0, file_size: 0}],
+                    chat: {id: 0, type: "private", first_name: "Test"},
+                    date: Date.now(),
+                    from: {id: 0, first_name: "Test", is_bot: false},
+                    message_id: 0,
+                }
+                await expect(media.uploadMedia(message, "photo")).rejects.toThrow(GrammyError);
+            });
         });
 
-        afterAll(() => {
-            getFileSpy?.mockRestore();
-        });
-
-        it("Should throw an error if getMediaObj throws", async () => {
-            const message: (Message & Update.NonChannel) = {
-                photo: [{file_id: "INVALID", file_unique_id: "INVALID", height: 0, width: 0, file_size: 0}],
-                chat: {id: 0, type: "private", first_name: "Test"},
-                date: Date.now(),
-                from: {id: 0, first_name: "Test", is_bot: false},
-                message_id: 0,
-            }
-            await expect(media.uploadMedia(message, "INVALID" as any)).rejects.toBeInstanceOf(Error);
-        });
-
-        it("Should throw a GetFileError if bot.api.getFile fails", async () => {
-            const message: (Message & Update.NonChannel) = {
-                photo: [{file_id: "INVALID", file_unique_id: "INVALID", height: 0, width: 0, file_size: 0}],
-                chat: {id: 0, type: "private", first_name: "Test"},
-                date: Date.now(),
-                from: {id: 0, first_name: "Test", is_bot: false},
-                message_id: 0,
-            }
-            getFileSpy = jest.spyOn(bot.bot.api, "getFile").mockImplementation(() => Promise.reject());
-            await expect(media.uploadMedia(message, "photo")).rejects.toBeInstanceOf(GetFileError);
-            getFileSpy.mockRestore();
-        });
+        
     })
 })
 
