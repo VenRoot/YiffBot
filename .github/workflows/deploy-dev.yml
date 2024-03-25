@@ -1,0 +1,48 @@
+name: Build and Publish Docker Image for development
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 'latest' # Oder deine gewünschte Version
+    
+    - name: Install Dependencies
+      run: npm install
+
+    - name: Run Tests
+      run: npm run test # Stelle sicher, dass dieses Script in deiner package.json definiert ist
+
+  build-and-publish:
+    needs: test # Abhängig vom 'test'-Job
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Login to docker registry
+      uses: docker/login-action@v3
+      with:
+        registry : harbor.m-loeffler.de
+        username: ${{ secrets.HARBOR_ROBOT_NAME }}
+        password: ${{ secrets.HARBOR_ROBOT_SECRET }}
+
+    - name: Build and push Docker Image
+      uses: docker/build-push-action@v3
+      with:
+        context: .
+        file: Dockerfile.dev
+        push: true
+        tags: harbor.m-loeffler.de/yiffbot/yiffbot:dev
