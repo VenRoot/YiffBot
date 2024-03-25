@@ -1552,7 +1552,8 @@ describe('handleMedia', () => {
         );
         const ctxSpy = jest.spyOn(ctx, "reply");
         await middleware.handleMedia(ctx as Context, "photo");
-        expect(ctxSpy).toHaveBeenCalledWith("This command can only be used in direct messages");
+        expect(ctxSpy).not.toHaveBeenCalled(); // It should not call the function if it sees a media in the group
+        // expect(ctxSpy).toHaveBeenCalledWith("This command can only be used in direct messages");
       });
     });
 
