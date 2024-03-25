@@ -44,8 +44,8 @@ export class AnyError extends Error {
 }
 
 export class InvalidStatusCode extends Error {
-    constructor(link: string, statusCode?: number) {
-        super(`Request ${link} Failed with ${statusCode ?? 0}`);
+    constructor(statusCode?: number) {
+        super(`HTTPS Request failed with ${statusCode ?? 0}`);
     }
 }
 

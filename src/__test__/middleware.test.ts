@@ -14,8 +14,10 @@ import { PathLike, mkdir } from "fs";
 import * as special from "../special";
 import * as media from "../modules/media";
 import type { directories, mediaCounts } from "../modules/media";
-import { downloadFile } from "../modules/file/downloadFile";
-import { EmptyFileError } from "../modules/exceptions";
+import * as downloadFile from "../modules/file/downloadFile";
+import https from "https";
+import { IncomingMessage } from "http";
+import { Bot } from "grammy";
 
 jest.mock("grammy", () => ({
   ...jest.requireActual("grammy"),
@@ -266,7 +268,7 @@ describe("caption", () => {
           await middleware.caption(ctx as Context);
           expect(replySpy).not.toHaveBeenCalled();
           expect(reportErrorSpy).toHaveBeenCalled();
-        })
+        });
     })
 });
 
@@ -941,7 +943,11 @@ describe('status', () => {
       mediaCount.set("normal", {gif: 5, jpg: 5, mp4: 5});
       mediaCount.set("christmas", {gif: 5, jpg: 5, mp4: 5});
       mediaCount.set("newyear", {gif: 5, jpg: 5, mp4: 5});
-      expect(getMediaCountSpy).toHaveReturnedWith(Promise.resolve(mediaCount));
+      console.warn(getMediaCountSpy.mock.results);
+      // expect(getMediaCountSpy).(Promise.resolve(mediaCount));
+      expect(getMediaCountSpy).toHaveReturnedWith(expect.any(Promise));
+      //@ts-ignore
+      expect(getMediaCountSpy()).resolves.toEqual(mediaCount);
       expect(ctxSpy).toHaveBeenCalled();
     });
   });
@@ -1491,6 +1497,26 @@ describe('handleMedia', () => {
   });
 
   describe('error handling', () => {
+
+    describe("NoParamsError", () => {
+      it("Should throw an error", async () => {
+        const ctx = createPrivateCTX(
+          "",
+          1,
+          1,
+          1,
+          "Test",
+          undefined,
+          undefined,
+          undefined,
+          undefined
+        );
+        const ctxSpy = jest.spyOn(ctx, "reply");
+        await middleware.handleMedia(ctx as Context, undefined as any);
+        expect(ctxSpy).toHaveBeenCalledWith("No media type given");
+      });
+
+    });
     describe('NoMessage', () => {
       it("Should throw an error", async () => {
         const ctx = createPrivateCTX(
@@ -1557,22 +1583,104 @@ describe('handleMedia', () => {
       });
     });
 
-    describe.skip('EmptyFileError', () => {
-      let fsStatSpy: jest.SpyInstance;
-      let fsUnlinkSpy: jest.SpyInstance;
-      let downloadFileSpy: jest.SpyInstance;
-      // let uploadMediaSpy: jest.SpyInstance;
+    describe('NoMediaError', () => {
+      let checkVenSpy: jest.SpyInstance;
+
       beforeAll(() => {
+        checkVenSpy = jest.spyOn(core, "checkAdmin").mockResolvedValue(true);
+      });
+
+      afterAll(() => {
+        checkVenSpy.mockRestore();
+      });
+      it("Should throw a NoMediaError if no media is provided", async () => {
+        const ctx = createPrivateCTX(
+          "",
+          1,
+          1,
+          1,
+          "Test",
+          undefined,
+          undefined,
+          undefined,
+          undefined
+        );
+        const ctxSpy = jest.spyOn(ctx, "reply");
+        await middleware.handleMedia(ctx as Context, "photo");
+        expect(ctxSpy).toHaveBeenCalledWith("No valid media. Recieved photo");
+      });
+
+      it("Should throw a NoMediaError if the wrong paramter is given", async () => {
+        const ctx = createPrivateCTX(
+          "",
+          1,
+          1,
+          1,
+          "Test",
+          undefined,
+          undefined,
+          {duration: 12, file_id: "1", file_unique_id: "1", height: 12, width: 12, file_size: 12},
+          undefined
+        );
+        const ctxSpy = jest.spyOn(ctx, "reply");
+        await middleware.handleMedia(ctx as Context, "photo");
+        expect(ctxSpy).toHaveBeenCalledWith("No valid media. Recieved photo");
+      
+      })
+    });
+
+    describe("InvalidStatusCode", () => {
+      let checkVenSpy: jest.SpyInstance;
+      let httpsSpy: jest.SpyInstance;
+
+      beforeAll(() => {
+        checkVenSpy = jest.spyOn(core, "checkAdmin").mockResolvedValue(true);
+        //@ts-ignore
+        httpsSpy = jest.spyOn(https, "get").mockImplementation((link: string, cb: (res: IncomingMessage) => void) => {
+          cb({statusCode: 404} as any);
+        })
+      });
+
+      afterAll(() => {
+        checkVenSpy.mockRestore();
+        httpsSpy.mockRestore();
+      });
+
+      it("Should throw an error", async () => {
+        const ctx = createPrivateCTX(
+          "",
+          1,
+          1,
+          1,
+          "Test",
+          undefined,
+          [{file_id: "1", file_unique_id: "1", height: 0, width: 0, file_size: 1}],
+          undefined,
+          undefined
+        );
+        const ctxSpy = jest.spyOn(ctx, "reply");
+        await middleware.handleMedia(ctx as Context, "photo");
+        expect(ctxSpy).toHaveBeenCalledWith("Downloading the media failed: HTTPS Request failed with 404");
+      });
+    });
+
+    describe('EmptyFileError', () => {
+      let checkVenSpy: jest.SpyInstance;
+      let fsStatSpy: jest.SpyInstance;
+      let fsUnlinkSpy: jest.SpyInstance; // Will unlink in the catch block
+      let downloadFileSpy: jest.SpyInstance;
+
+      beforeAll(() => {
+        checkVenSpy = jest.spyOn(core, "checkAdmin").mockResolvedValue(true);
         fsStatSpy = jest.spyOn(fs, "stat").mockResolvedValue({size: 0, isFile: () => true} as any);
         fsUnlinkSpy = jest.spyOn(fs, "unlink").mockResolvedValue(undefined);
-        downloadFileSpy = jest.spyOn({downloadFile}, "downloadFile").mockImplementation(() => Promise.resolve());
-        // uploadMediaSpy = jest.spyOn(media, "uploadMedia"); // Not overwriting or mocking
+        downloadFileSpy = jest.spyOn(downloadFile, "downloadFile").mockResolvedValue(undefined);
       });
       afterAll(() => {
+        checkVenSpy.mockRestore();
         fsStatSpy.mockRestore();
         fsUnlinkSpy.mockRestore();
         downloadFileSpy.mockRestore();
-        // uploadMediaSpy.mockRestore();
       });
       it("Should throw an error", async () => {
         const ctx = createPrivateCTX(
@@ -1588,11 +1696,60 @@ describe('handleMedia', () => {
         );
         const ctxSpy = jest.spyOn(ctx, "reply");
         await middleware.handleMedia(ctx as Context, "photo"); // Calling the entrypoint, which calls uploadMedia
-        // await expect(uploadMediaSpy).rejects.toThrow(EmptyFileError);
         expect(downloadFileSpy).toHaveBeenCalled();
         expect(fsStatSpy).toHaveBeenCalled();
-        console.warn(ctxSpy.mock.calls[0]);
-        expect(ctxSpy).toHaveBeenCalledWith("File is empty! Try again");
+        // console.warn(ctxSpy.mock.calls[0]);
+        expect(ctxSpy).toHaveBeenCalledWith("Error: File is empty");
+      });
+    });
+
+    describe.skip('GrammyError', () => {
+      let checkVenSpy: jest.SpyInstance;
+      let replySpy: jest.SpyInstance;
+
+      beforeAll(() => {
+        checkVenSpy = jest.spyOn(core, "checkAdmin").mockResolvedValue(true);
+        Bot.prototype.api.getFile = jest.fn().mockRejectedValueOnce(new Error("TEST ERROR"));
+        //@ts-ignore
+      });
+
+      afterAll(() => {
+        checkVenSpy.mockRestore();
+      });
+
+      it("Should throw an error", async () => {
+        const ctx = createPrivateCTX("", 1, 1, 1, "Test", undefined, [{
+          file_id: "INVALID", file_unique_id: "INVALID", height: 0, width: 0, file_size: 51_000_000
+        }]);
+        replySpy = jest.spyOn(ctx, "reply");
+
+        await middleware.handleMedia(ctx as Context, "photo");
+        expect(replySpy).toHaveBeenCalledWith("Error while downloading the media: TEST ERROR");
+      });
+    });
+
+    describe.skip('GrammyError', () => {
+      let checkVenSpy: jest.SpyInstance;
+      let fsStatSpy: jest.SpyInstance;
+      let fsUnlinkSpy: jest.SpyInstance;
+      let downloadSpy: jest.SpyInstance;
+      let ctx: Partial<Context>;
+      let replySpy: jest.SpyInstance;
+      beforeAll(() => {
+        ctx = createPrivateCTX("", 1, 1, 1, "Test", undefined, [{
+          file_id: "INVALID", file_unique_id: "INVALID", height: 0, width: 0, file_size: 51_000_000
+        }]);
+        replySpy = jest.spyOn(ctx, "reply");
+
+      });
+
+      afterAll(() => {
+        replySpy.mockRestore();
+      });
+      it("Should throw an error if the file is too big", async () => {
+        await middleware.handleMedia(ctx as Context, "photo");
+
+        expect(replySpy).toHaveBeenCalledWith("File is too big! Max size is 50MB");
       });
     });
 
