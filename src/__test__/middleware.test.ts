@@ -1510,7 +1510,6 @@ describe('handleMedia', () => {
   });
 
   describe('error handling', () => {
-
     describe("NoParamsError", () => {
       it("Should throw an error", async () => {
         const ctx = createPrivateCTX(
@@ -1531,7 +1530,7 @@ describe('handleMedia', () => {
 
     });
     describe('NoMessage', () => {
-      it("Should throw an error", async () => {
+      it("Should do nothing since it's already catched", async () => {
         const ctx = createPrivateCTX(
           "",
           1,
@@ -1547,7 +1546,62 @@ describe('handleMedia', () => {
         ctx.message = undefined;
         const ctxSpy = jest.spyOn(ctx, "reply");
         await middleware.handleMedia(ctx as Context, "photo");
-        expect(ctxSpy).toHaveBeenCalledWith("No message object recieved-");
+        expect(ctxSpy).not.toHaveBeenCalled();
+      });
+
+      it("Should not reply if a picture is send in a group", async () => {
+        const ctx = createGroupCTX(
+          "",
+          1,
+          1,
+          1,
+          "Test",
+          undefined,
+          [{file_id: "1", file_unique_id: "1", height: 0, width: 0}],
+          undefined,
+          undefined
+        );
+        const ctxSpy = jest.spyOn(ctx, "reply");
+        await middleware.handleMedia(ctx as Context, "photo");
+        expect(ctxSpy).not.toHaveBeenCalled();
+      });
+
+      it("Should not reply if the message object is invalid in a group", async () => {
+        const ctx = createGroupCTX(
+          "",
+          1,
+          1,
+          1,
+          "Test",
+          undefined,
+          undefined,
+          undefined,
+          undefined
+        );
+        //@ts-ignore
+        ctx.message = undefined;
+        const ctxSpy = jest.spyOn(ctx, "reply");
+        await middleware.handleMedia(ctx as Context, "photo");
+        expect(ctxSpy).not.toHaveBeenCalled();
+      });
+
+      it("Should not reply in dms if the message object is invalid, since it's already sorted out", async () => {
+        const ctx = createPrivateCTX(
+          "",
+          1,
+          1,
+          1,
+          "Test",
+          undefined,
+          undefined,
+          undefined,
+          undefined
+        );
+        //@ts-ignore
+        ctx.message = undefined;
+        const ctxSpy = jest.spyOn(ctx, "reply");
+        await middleware.handleMedia(ctx as Context, "photo");
+        expect(ctxSpy).not.toHaveBeenCalled();
       });
     });
     describe('NoDirectMessage', () => {
