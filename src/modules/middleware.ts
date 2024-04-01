@@ -267,7 +267,7 @@ export async function handleMedia(e: Context, type: "photo" | "animation" | "vid
         }
         else if(err instanceof GrammyError) {
             if(err.description === "Bad Request: file is too big") {
-                e.reply("ERROR: File is too big, maximum size is 50MB");
+                e.reply("ERROR: File is too big, maximum size is 20MB");
             }
             else {
                 e.reply("Error from the Telegram API while uploading the file: " + err.description);
